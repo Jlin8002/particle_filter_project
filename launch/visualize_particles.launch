@@ -3,7 +3,7 @@
   <arg name="open_rviz" default="true"/>
 
   <!-- Map server -->
-  <node pkg="map_server" name="map_server" type="map_server" args="$(find particle_filter_pset)/map/house_map.yaml"/>
+  <node pkg="map_server" name="map_server" type="map_server" args="$(find particle_filter_project)/map/house_map.yaml"/>
 
   <!-- Run a transformation between the map and odom frames -->
   <!-- <node pkg="tf" type="static_transform_publisher" name="link1_broadcaster" args="-2.75 1.0 0 0 0 0 /map /odom 100" /> -->
@@ -16,7 +16,7 @@
   <!-- rviz -->
   <group if="$(arg open_rviz)"> 
     <node pkg="rviz" type="rviz" name="rviz" required="true"
-          args="-d $(find particle_filter_pset)/rviz/particle_filter_pset.rviz"/>
+          args="-d $(find particle_filter_project)/rviz/particle_filter_project.rviz"/>
   </group>
 
 </launch>

@@ -1,8 +1,8 @@
 <package format="2">
-  <name>particle_filter_pset</name>
+  <name>particle_filter_project</name>
   <version>0.0.0</version>
   <description>
-  The particle_filter_pset package
+  The particle_filter_project package
   </description>
   <maintainer email="sarahsebo@uchicago.edu">Sarah Sebo</maintainer>
   <license>MIT</license>

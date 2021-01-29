@@ -68,7 +68,7 @@ class ParticleFilter:
     def __init__(self):
 
         # once everything is setup initialized will be set to true
-        self.initialized = False        
+        self.initialized = False
 
 
         # initialize this particle filter node
@@ -95,7 +95,7 @@ class ParticleFilter:
         self.robot_estimate = Pose()
 
         # set threshold values for linear and angular movement before we preform an update
-        self.lin_mvmt_threshold = 0.2        
+        self.lin_mvmt_threshold = 0.2
         self.ang_mvmt_threshold = (np.pi / 6)
 
         self.odom_pose_last_motion_update = None
@@ -133,10 +133,10 @@ class ParticleFilter:
 
         self.occupancy_field = OccupancyField(data)
 
-    
+
 
     def initialize_particle_cloud(self):
-        
+
         # TODO
 
 
@@ -147,7 +147,7 @@ class ParticleFilter:
 
     def normalize_particles(self):
         # make all the particle weights sum to 1.0
-        
+
         # TODO
 
 
@@ -192,12 +192,12 @@ class ParticleFilter:
             return
 
         # wait for a little bit for the transform to become avaliable (in case the scan arrives
-        # a little bit before the odom to base_footprint transform was updated) 
+        # a little bit before the odom to base_footprint transform was updated)
         self.tf_listener.waitForTransform(self.base_frame, self.odom_frame, data.header.stamp, rospy.Duration(0.5))
         if not(self.tf_listener.canTransform(self.base_frame, data.header.frame_id, data.header.stamp)):
             return
 
-        # calculate the pose of the laser distance sensor 
+        # calculate the pose of the laser distance sensor
         p = PoseStamped(
             header=Header(stamp=rospy.Time(0),
                           frame_id=data.header.frame_id))
@@ -230,7 +230,7 @@ class ParticleFilter:
             curr_yaw = get_yaw_from_pose(self.odom_pose.pose)
             old_yaw = get_yaw_from_pose(self.odom_pose_last_motion_update.pose)
 
-            if (np.abs(curr_x - old_x) > self.lin_mvmt_threshold or 
+            if (np.abs(curr_x - old_x) > self.lin_mvmt_threshold or
                 np.abs(curr_y - old_y) > self.lin_mvmt_threshold or
                 np.abs(curr_yaw - old_yaw) > self.ang_mvmt_threshold):
 
@@ -255,17 +255,17 @@ class ParticleFilter:
 
     def update_estimated_robot_pose(self):
         # based on the particles within the particle cloud, update the robot pose estimate
-        
+
         # TODO
 
 
-    
+
     def update_particle_weights_with_measurement_model(self, data):
 
         # TODO
 
 
-        
+
 
     def update_particles_with_motion_model(self):
 
@@ -277,7 +277,7 @@ class ParticleFilter:
 
 
 if __name__=="__main__":
-    
+
 
     pf = ParticleFilter()
 

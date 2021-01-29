@@ -82,7 +82,6 @@ class ParticleFilter:
 
         # inialize our map and occupancy field
         self.map = OccupancyGrid()
-        self.occupancy_field = None
 
 
         # the number of particles used in the particle filter

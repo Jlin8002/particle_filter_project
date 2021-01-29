@@ -129,7 +129,7 @@ class ParticleFilter:
     def get_map(self, data):
 
         self.map = data
-    
+
 
     def initialize_particle_cloud(self):
 

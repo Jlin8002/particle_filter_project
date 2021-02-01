@@ -20,7 +20,9 @@ def yaw_from_pose(p: Pose) -> float:
     return yaw
 
 
-def draw_random_sample(choices: List[T], probabilities: List[float], n: int) -> List[T]:
+def draw_weighted_sample(
+    choices: List[T], probabilities: List[float], n: int
+) -> List[T]:
     """
     Return a random sample of n elements from the set choices with the specified probabilities.
 
@@ -32,6 +34,10 @@ def draw_random_sample(choices: List[T], probabilities: List[float], n: int) -> 
     """
 
     return random.default_rng().choice(a=choices, size=n, replace=True, p=probabilities)
+
+
+def draw_uniform_sample(choices: List[T], n: int) -> List[T]:
+    return random.default_rng().choice(a=choices, size=n)
 
 
 def points_distance(p1: Point, p2: Point) -> float:

@@ -101,7 +101,7 @@ class ParticleFilterBase(ABC):
 
         header = Header(stamp=rospy.Time.now(), frame_id=ParticleFilterBase.map_topic)
 
-        poses = map(lambda p: p.pose, self.particle_cloud)
+        poses = [p.pose for p in self.particle_cloud]
 
         particle_cloud_pose_array = PoseArray(header, poses)
 

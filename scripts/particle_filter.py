@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from sensor_msgs.msg import LaserScan
 
 import lib.particle as particle

@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 import math
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Union
 
 import rospy
 
@@ -12,14 +13,35 @@ from std_msgs.msg import Header
 from tf import TransformBroadcaster, TransformListener
 
 from lib.particle import Particle
-from lib.util import points_distance, yaw_from_pose
+from lib.turtle_bot import TurtlePose
+import lib.turtle_bot as turtle
+import lib.vector2 as v2
 
 
-def pose_displacement(p1: PoseStamped, p2: PoseStamped) -> Tuple[float, float]:
-    displacement_linear = points_distance(p1.pose.position, p2.pose.position)
-    displacement_angular = abs(yaw_from_pose(p2.pose) - yaw_from_pose(p1.pose))
+def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[float, float]:
+    displacement_linear = v2.distance_between(p1.position, p2.position)
+    displacement_angular = abs(p1.yaw - p2.yaw)
 
     return (displacement_linear, displacement_angular)
+
+
+@dataclass
+class AwaitGrid:
+    pass
+
+
+@dataclass
+class AwaitOdom:
+    grid: OccupancyGrid
+
+
+@dataclass
+class Initialized:
+    particle_cloud: List[Particle]
+    pose_previous: TurtlePose
+
+
+State = Union[AwaitGrid, AwaitOdom, Initialized]
 
 
 class ParticleFilterBase(ABC):
@@ -37,100 +59,79 @@ class ParticleFilterBase(ABC):
     ang_mvmt_threshold: float = math.pi / 6.0
 
     def __init__(self) -> None:
-
-        # once everything is setup initialized will be set to true
-        self.initialized: bool = False
+        self.state: State = AwaitGrid()
 
         # initialize this particle filter node
         rospy.init_node("turtlebot3_particle_filter")
-
-        self.map: Optional[OccupancyGrid] = None
-
-        # initialize the particle cloud array
-        self.particle_cloud: List[Particle] = []
-
-        # initialize the estimated robot pose
-        self.robot_estimate: Pose = Pose()  # TODO: bad
-
-        self.odom_pose_last_motion_update: Optional[PoseStamped] = None
 
         # Setup publishers and subscribers
 
         # publish the current particle cloud
         self.particles_pub: rospy.Publisher = rospy.Publisher(
-            "particle_cloud", PoseArray, queue_size=10
+            "particle_cloud",
+            PoseArray,
+            queue_size=10,
         )
 
         # publish the estimated robot pose
         self.robot_estimate_pub: rospy.Publisher = rospy.Publisher(
-            "estimated_robot_pose", PoseStamped, queue_size=10
+            "estimated_robot_pose",
+            PoseStamped,
+            queue_size=10,
         )
 
         # subscribe to the map server
-        rospy.Subscriber(ParticleFilterBase.map_topic, OccupancyGrid, self.get_map)
+        rospy.Subscriber(
+            ParticleFilterBase.map_topic,
+            OccupancyGrid,
+            self.get_grid,
+        )
 
         # subscribe to the lidar scan from the robot
         rospy.Subscriber(
-            ParticleFilterBase.scan_topic, LaserScan, self.robot_scan_received
+            ParticleFilterBase.scan_topic,
+            LaserScan,
+            self.robot_scan_received,
         )
 
         # enable listening for and broadcasting corodinate transforms
         self.tf_listener: TransformListener = TransformListener()
         self.tf_broadcaster: TransformBroadcaster = TransformBroadcaster()
 
-        # initialize the particle cloud
-        self.initialize_particle_cloud()
-        self.normalize_particles()
-        self.publish_particle_cloud()
+    def get_grid(self, grid: OccupancyGrid) -> None:
+        if isinstance(self.state, AwaitGrid):
+            self.state = AwaitOdom(grid=grid)
 
-        self.initialized: bool = True
-
-    def get_map(self, data: OccupancyGrid) -> None:
-        self.map = data
-
-    @abstractmethod
-    def initialize_particle_cloud(self) -> None:
-        pass
-
-    @abstractmethod
-    def normalize_particles(self) -> None:
-        # make all the particle weights sum to 1.0
-        pass
-
-    def publish_particle_cloud(self) -> None:
+    def publish_particle_cloud(self, particle_cloud: List[Particle]) -> None:
 
         header = Header(stamp=rospy.Time.now(), frame_id=ParticleFilterBase.map_topic)
 
-        poses = [p.pose for p in self.particle_cloud]
+        poses = [turtle.to_pose(p.pose) for p in particle_cloud]
 
         particle_cloud_pose_array = PoseArray(header, poses)
 
         self.particles_pub.publish(particle_cloud_pose_array)
 
-    def publish_estimated_robot_pose(self):
+    def publish_estimated_robot_pose(self, robot_estimate: TurtlePose):
 
         header = Header(stamp=rospy.Time.now(), frame_id=ParticleFilterBase.map_topic)
 
-        pose = self.robot_estimate
+        pose = turtle.to_pose(robot_estimate)
 
         robot_pose_estimate_stamped = PoseStamped(header, pose)
 
         self.robot_estimate_pub.publish(robot_pose_estimate_stamped)
 
-    @abstractmethod
-    def resample_particles(self) -> None:
-        pass
-
     def robot_scan_received(self, data: LaserScan) -> None:
-
-        # wait until initialization is complete
-        if not self.initialized:
+        if isinstance(self.state, AwaitGrid):
             return
 
         # we need to be able to transfrom the laser frame to the base frame
         if not (
             self.tf_listener.canTransform(
-                ParticleFilterBase.base_frame, data.header.frame_id, data.header.stamp
+                ParticleFilterBase.base_frame,
+                data.header.frame_id,
+                data.header.stamp,
             )
         ):
             return
@@ -146,80 +147,142 @@ class ParticleFilterBase(ABC):
 
         if not (
             self.tf_listener.canTransform(
-                ParticleFilterBase.base_frame, data.header.frame_id, data.header.stamp
+                ParticleFilterBase.base_frame,
+                data.header.frame_id,
+                data.header.stamp,
             )
         ):
             return
 
-        # calculate the pose of the laser distance sensor
-        laser_pose = PoseStamped(
-            header=Header(stamp=rospy.Time(0), frame_id=data.header.frame_id)
-        )
-
-        self.laser_pose = self.tf_listener.transformPose(  # TODO: bad
-            ParticleFilterBase.base_frame, laser_pose
-        )
-
         # determine where the robot thinks it is based on its odometry
-        odom_pose = PoseStamped(
+        pose_empty = PoseStamped(
             header=Header(
-                stamp=data.header.stamp, frame_id=ParticleFilterBase.base_frame
+                stamp=data.header.stamp,
+                frame_id=ParticleFilterBase.base_frame,
             ),
             pose=Pose(),
         )
 
-        self.odom_pose = self.tf_listener.transformPose(  # TODO: bad
-            ParticleFilterBase.odom_frame, odom_pose
+        pose_current = turtle.from_pose(
+            self.tf_listener.transformPose(
+                ParticleFilterBase.odom_frame,
+                pose_empty,
+            ).pose
         )
 
-        # we need to be able to compare the current odom pose to the prior odom pose
-        # if there isn't a prior odom pose, set the odom_pose variable to the current pose
-        if self.odom_pose_last_motion_update is None:
-            self.odom_pose_last_motion_update = self.odom_pose  # TODO: bad
-            return
-
-        if self.particle_cloud:
-
-            # check to see if we've moved far enough to perform an update
-
-            (disp_lin, disp_ang) = pose_displacement(
-                p1=self.odom_pose_last_motion_update,
-                p2=self.odom_pose,
+        if isinstance(self.state, AwaitOdom):
+            particle_cloud = ParticleFilterBase.normalize_particles(
+                particle_cloud=ParticleFilterBase.initialize_particle_cloud(
+                    num_particles=ParticleFilterBase.num_particles,
+                    occupancy_grid=self.state.grid,
+                ),
             )
 
-            if (
-                disp_lin > ParticleFilterBase.lin_mvmt_threshold
-                or disp_ang > ParticleFilterBase.ang_mvmt_threshold
-            ):
+            self.state = Initialized(
+                particle_cloud=particle_cloud,
+                pose_previous=pose_current,
+            )
 
-                # This is where the main logic of the particle filter is carried out
+            return
 
-                self.update_particles_with_motion_model()
+        # check to see if we've moved far enough to perform an update
 
-                self.update_particle_weights_with_measurement_model(data)
+        (disp_lin, disp_ang) = pose_displacement(
+            p1=pose_current,
+            p2=self.state.pose_previous,
+        )
 
-                self.normalize_particles()
+        if (
+            disp_lin < ParticleFilterBase.lin_mvmt_threshold
+            and disp_ang < ParticleFilterBase.ang_mvmt_threshold
+        ):
+            return
 
-                self.resample_particles()
+        particle_cloud = ParticleFilterBase.update_particles(
+            particle_cloud=self.state.particle_cloud,
+            disp_linear=disp_lin,
+            disp_angular=disp_ang,
+            laser_scan=data,
+        )
 
-                self.update_estimated_robot_pose()
+        robot_estimate = ParticleFilterBase.update_estimated_robot_pose(
+            particle_cloud,
+        )
 
-                self.publish_particle_cloud()
-                self.publish_estimated_robot_pose()
+        self.state = Initialized(
+            particle_cloud=particle_cloud,
+            pose_previous=pose_current,
+        )
 
-                self.odom_pose_last_motion_update = self.odom_pose
+        self.publish_particle_cloud(particle_cloud)
+        self.publish_estimated_robot_pose(robot_estimate)
 
+    @staticmethod
+    def update_particles(
+        particle_cloud: List[Particle],
+        disp_linear: float,
+        disp_angular: float,
+        laser_scan: LaserScan,
+    ) -> List[Particle]:
+        with_motion = ParticleFilterBase.update_particles_with_motion_model(
+            particle_cloud,
+            disp_linear,
+            disp_angular,
+        )
+
+        with_measurement = (
+            ParticleFilterBase.update_particle_weights_with_measurement_model(
+                particle_cloud=with_motion,
+                laser_scan=laser_scan,
+            )
+        )
+
+        normalized = ParticleFilterBase.normalize_particles(
+            particle_cloud=with_measurement,
+        )
+
+        resampled = ParticleFilterBase.resample_particles(
+            particle_cloud=normalized,
+        )
+
+        return resampled
+
+    @staticmethod
     @abstractmethod
-    def update_estimated_robot_pose(self) -> None:
+    def initialize_particle_cloud(
+        num_particles: int, occupancy_grid: OccupancyGrid
+    ) -> List[Particle]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def normalize_particles(particle_cloud: List[Particle]) -> List[Particle]:
+        # make all the particle weights sum to 1.0
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def resample_particles(particle_cloud: List[Particle]) -> List[Particle]:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def update_estimated_robot_pose(particle_cloud: List[Particle]) -> TurtlePose:
         # based on the particles within the particle cloud, update the robot pose estimate
         pass
 
+    @staticmethod
     @abstractmethod
-    def update_particle_weights_with_measurement_model(self, data: LaserScan) -> None:
+    def update_particle_weights_with_measurement_model(
+        particle_cloud: List[Particle], laser_scan: LaserScan
+    ) -> List[Particle]:
         pass
 
+    @staticmethod
     @abstractmethod
-    def update_particles_with_motion_model(self):
+    def update_particles_with_motion_model(
+        particle_cloud: List[Particle], disp_linear: float, disp_angular: float
+    ) -> List[Particle]:
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly
         pass

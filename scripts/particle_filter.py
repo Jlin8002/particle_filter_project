@@ -1,65 +1,82 @@
 #!/usr/bin/env python3
 
+from functools import reduce
+from typing import List, Tuple
+
+import numpy as np
+
+from nav_msgs.msg import OccupancyGrid
 from sensor_msgs.msg import LaserScan
 
+from lib.particle import Particle
 import lib.particle as particle
 from lib.particle_filter_base import ParticleFilterBase
-from lib.util import *
-import numpy as np
-from tf.transformations import quaternion_from_euler
+from lib.turtle_bot import TurtlePose
+from lib.util import draw_weighted_sample
+from lib.vector2 import Vector2
+
+# TODO: iterate over weights once then pass weight list around
 
 
 class ParticleFilter(ParticleFilterBase):
-    def initialize_particle_cloud(self) -> None:
-        while self.map is None:
-            pass
+    @staticmethod
+    def initialize_particle_cloud(
+        num_particles: int,
+        occupancy_grid: OccupancyGrid,
+    ) -> List[Particle]:
+        return particle.from_occupancy_grid(occupancy_grid, num_particles)
 
-        self.particle_cloud = particle.from_occupancy_grid(
-            self.map,
-            self.num_particles,
+    @staticmethod
+    def normalize_particles(particle_cloud: List[Particle]) -> List[Particle]:
+        weight_sum = sum([p.weight for p in particle_cloud])
+
+        return [
+            Particle(pose=p.pose, weight=p.weight / weight_sum) for p in particle_cloud
+        ]
+
+    @staticmethod
+    def resample_particles(particle_cloud: List[Particle]) -> List[Particle]:
+        weights = [p.weight for p in particle_cloud]
+
+        return draw_weighted_sample(
+            choices=particle_cloud,
+            probabilities=weights,
+            n=len(particle_cloud),
         )
 
+    @staticmethod
+    def update_estimated_robot_pose(particle_cloud: List[Particle]) -> TurtlePose:
+        def accumulate_components(
+            acc: Tuple[List[Vector2], List[float], List[float]],
+            p: Particle,
+        ):
+            (ps, ys, ws) = acc
+            return ([p.pose.position, *ps], [p.pose.yaw, *ys], [p.weight, *ws])
 
-    def normalize_particles(self) -> None:
-        weight_sum = 0
+        (positions, yaws, weights) = reduce(
+            accumulate_components,
+            particle_cloud,
+            initial=([], [], []),
+        )
 
-        for p in self.particle_cloud:
-            weight_sum += p.weight
+        avg_position = np.average(positions, weights=weights)
+        avg_yaw = np.average(yaws, weights=weights)
 
-        for p in self.particle_cloud:
-            p.weight /= weight_sum
+        return TurtlePose(position=avg_position, yaw=avg_yaw)
 
-
-    def resample_particles(self) -> None:
-        weights = [p.weight for p in self.particle_cloud]
-
-        self.particle_cloud = draw_weighted_sample(
-            self.particle_cloud,
-            weights,
-            self.num_particles)
-
-
-    def update_estimated_robot_pose(self) -> None:
-        pose_array = np.array([[
-            p.pose.position.x,
-            p.pose.position.y,
-            yaw_from_pose(p.pose.orientation),
-            p.weight]
-            for p in self.particle_cloud])
-        
-        self.robot_estimate.position.x = np.average(pose_array[0], weights=pose_array[3])
-        self.robot_estimate.position.y = np.average(pose_array[1], weights=pose_array[3])
-        self.robot_estimate.orientation = quaternion_from_euler(
-            0,
-            0,
-            np.average(pose_array[2], weights=pose_array[3]))
-
-
-    def update_particle_weights_with_measurement_model(self, data: LaserScan) -> None:
+    @staticmethod
+    def update_particle_weights_with_measurement_model(
+        particle_cloud: List[Particle],
+        laser_scan: LaserScan,
+    ) -> List[Particle]:
         # TODO
         pass
 
-
-    def update_particles_with_motion_model(self):
+    @staticmethod
+    def update_particles_with_motion_model(
+        particle_cloud: List[Particle],
+        disp_linear: float,
+        disp_angular: float,
+    ) -> List[Particle]:
         # TODO
         pass

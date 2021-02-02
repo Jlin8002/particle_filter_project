@@ -15,11 +15,12 @@ from tf import TransformBroadcaster, TransformListener
 from lib.particle import Particle
 from lib.turtle_bot import TurtlePose
 import lib.turtle_bot as turtle
+from lib.vector2 import Vector2
 import lib.vector2 as v2
 
 
-def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[float, float]:
-    displacement_linear = v2.distance_between(p1.position, p2.position)
+def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
+    displacement_linear = p1.position - p2.position
     displacement_angular = abs(p1.yaw - p2.yaw)
 
     return (displacement_linear, displacement_angular)
@@ -193,7 +194,7 @@ class ParticleFilterBase(ABC):
         )
 
         if (
-            disp_lin < ParticleFilterBase.lin_mvmt_threshold
+            v2.magnitude(disp_lin) < ParticleFilterBase.lin_mvmt_threshold
             and disp_ang < ParticleFilterBase.ang_mvmt_threshold
         ):
             return
@@ -220,7 +221,7 @@ class ParticleFilterBase(ABC):
     @staticmethod
     def update_particles(
         particle_cloud: List[Particle],
-        disp_linear: float,
+        disp_linear: Vector2,
         disp_angular: float,
         laser_scan: LaserScan,
     ) -> List[Particle]:
@@ -281,7 +282,7 @@ class ParticleFilterBase(ABC):
     @staticmethod
     @abstractmethod
     def update_particles_with_motion_model(
-        particle_cloud: List[Particle], disp_linear: float, disp_angular: float
+        particle_cloud: List[Particle], disp_linear: Vector2, disp_angular: float
     ) -> List[Particle]:
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly

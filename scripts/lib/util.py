@@ -1,23 +1,24 @@
-import math
-from typing import List, Tuple, TypeVar
+from typing import List, TypeVar
 
-from geometry_msgs.msg import Point, Pose
-from numpy import random
-from tf.transformations import euler_from_quaternion
+from geometry_msgs.msg import Quaternion
+from numpy import ndarray, random
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 T = TypeVar("T")
 
 
-def yaw_from_pose(p: Pose) -> float:
+def yaw_from_quaternion(q: Quaternion) -> float:
     """
-    A helper function that takes in a Pose object (geometry_msgs) and returns yaw
+    A helper function that takes a quaternion and returns Euler yaw.
     """
 
-    (_, _, yaw) = euler_from_quaternion(
-        [p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w]
-    )
+    (_, _, yaw) = euler_from_quaternion([q.x, q.y, q.z, q.w])
 
     return yaw
+
+
+def yaw_to_quaternion(yaw: float) -> ndarray:
+    return quaternion_from_euler(ai=0.0, aj=0.0, ak=yaw)
 
 
 def draw_weighted_sample(
@@ -38,14 +39,3 @@ def draw_weighted_sample(
 
 def draw_uniform_sample(choices: List[T], n: int) -> List[T]:
     return random.default_rng().choice(a=choices, size=n)
-
-
-def points_distance(p1: Point, p2: Point) -> float:
-    return distance((p1.x, p1.y), (p2.x, p2.y))
-
-
-def distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
-    (x1, y1) = p1
-    (x2, y2) = p2
-
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)

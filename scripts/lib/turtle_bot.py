@@ -20,8 +20,8 @@ def from_pose(pose: Pose) -> TurtlePose:
     )
 
 
-def to_pose(turtle_pose: TurtlePose) -> Pose:
+def to_pose(pose: TurtlePose) -> Pose:
     return Pose(
-        position=v2.to_point(turtle_pose.position),
-        orientation=yaw_to_quaternion(turtle_pose.yaw),
+        position=v2.to_point(pose.position),
+        orientation=yaw_to_quaternion(pose.yaw),
     )

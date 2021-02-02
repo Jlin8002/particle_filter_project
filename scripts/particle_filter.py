@@ -75,8 +75,10 @@ class ParticleFilter(ParticleFilterBase):
     @staticmethod
     def update_particles_with_motion_model(
         particle_cloud: List[Particle],
-        disp_linear: float,
+        disp_linear: Vector2,
         disp_angular: float,
     ) -> List[Particle]:
-        # TODO
-        pass
+        # TODO: Out of bounds check (probably create a 2d OccupancyMatrix datatype for convenience)
+        return [
+            particle.translate(p, disp_linear, disp_angular) for p in particle_cloud
+        ]

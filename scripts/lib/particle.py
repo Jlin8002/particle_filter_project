@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from typing import List
 
@@ -23,6 +23,16 @@ class Cell(Enum):
     free = 0
     occupied = 100
     unknown = -1
+
+
+def translate(particle: Particle, disp_linear: Vector2, disp_angular: float) -> Particle:
+    return replace(
+        particle,
+        pose=TurtlePose(
+            position=particle.pose.position + disp_linear,
+            yaw=particle.pose.yaw + disp_angular,
+        ),
+    )
 
 
 def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particle]:

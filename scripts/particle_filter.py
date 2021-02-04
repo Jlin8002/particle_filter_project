@@ -15,6 +15,8 @@ from sensor_msgs.msg import LaserScan
 
 import lib.controller.cmd as cmd
 import lib.controller.sub as sub
+from lib.likelihood_field import LikelihoodField
+import lib.likelihood_field as lf
 from lib.particle import Particle
 from lib.turtle_bot import TurtlePose
 import particle_cloud as pc
@@ -29,11 +31,13 @@ class AwaitMap:
 
 @dataclass
 class AwaitPose:
+    likelihood_field: LikelihoodField
     particle_cloud: List[Particle]
 
 
 @dataclass
 class Initialized:
+    likelihood_field: LikelihoodField
     particle_cloud: List[Particle]
     pose_most_recent: TurtlePose
     pose_last_update: TurtlePose
@@ -79,12 +83,13 @@ def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
 
 def update_particle_cloud(
     particles: List[Particle],
+    field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
     scan: LaserScan,
 ) -> List[Particle]:
-    new_poses = pc.update_poses(particles, disp_linear, disp_angular)
-    new_weights = pc.update_weights(new_poses, scan)
+    new_poses = pc.update_poses(particles, field, disp_linear, disp_angular)
+    new_weights = pc.update_weights(new_poses, field, scan)
     normalized = pc.normalize(new_weights)
     resampled = pc.resample(normalized)
 
@@ -97,11 +102,20 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             pc.initialize(num_particles=NUM_PARTICLES, map=msg.map)
         )
 
-        return (AwaitPose(particle_cloud=cloud_init), cmd.none)
+        likelihood_field = lf.from_occupancy_grid(msg.map)
+
+        return (
+            AwaitPose(
+                likelihood_field=likelihood_field,
+                particle_cloud=cloud_init,
+            ),
+            cmd.none,
+        )
 
     if isinstance(model, AwaitPose) and isinstance(msg, Move):
         return (
             Initialized(
+                likelihood_field=model.likelihood_field,
                 particle_cloud=model.particle_cloud,
                 pose_most_recent=msg.pose,
                 pose_last_update=msg.pose,
@@ -123,6 +137,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
 
         particle_cloud = update_particle_cloud(
             particles=model.particle_cloud,
+            field=model.likelihood_field,
             disp_linear=disp_lin,
             disp_angular=disp_ang,
             scan=msg.scan,

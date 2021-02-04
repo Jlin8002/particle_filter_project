@@ -33,8 +33,6 @@ def particle_cloud(particle_cloud: List[Particle], frame_id: str) -> Cmd[PoseArr
     poses = [turtle.to_pose(p.pose) for p in particle_cloud]
     pose_array = PoseArray(header, poses)
 
-    print("cloud")
-
     return Cmd(
         topic_name="/particle_cloud",
         message_type=PoseArray,

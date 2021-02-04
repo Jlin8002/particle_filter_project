@@ -4,13 +4,12 @@ from typing import List
 
 import math
 import numpy.random as random
-
 from nav_msgs.msg import OccupancyGrid
+from rospy_util.vector2 import Vector2  # pyright: reportMissingTypeStubs=false
+import rospy_util.vector2 as v2
 
 from lib.turtle_bot import TurtlePose
 from lib.util import draw_uniform_sample, yaw_from_quaternion
-from lib.vector2 import Vector2
-import lib.vector2 as v2
 
 
 @dataclass

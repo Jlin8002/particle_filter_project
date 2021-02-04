@@ -1,10 +1,12 @@
+# pyright: reportMissingTypeStubs=false
+
 from dataclasses import dataclass
 
 from geometry_msgs.msg import Pose
+from rospy_util.vector2 import Vector2
+import rospy_util.vector2 as v2
 
 from lib.util import yaw_from_quaternion, yaw_to_quaternion
-from lib.vector2 import Vector2
-import lib.vector2 as v2
 
 
 @dataclass

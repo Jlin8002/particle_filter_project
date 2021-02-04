@@ -1,93 +1,179 @@
 #!/usr/bin/env python3
 
-from functools import reduce
-from typing import List, Tuple
+# pyright: reportMissingTypeStubs=false
 
-import numpy as np
-import rospy
+from dataclasses import dataclass, replace
+import math
+from typing import Any, List, Union, Tuple
 
 from nav_msgs.msg import OccupancyGrid
+import rospy
+from rospy_util.controller import Cmd, Controller, Sub
+from rospy_util.vector2 import Vector2
+import rospy_util.vector2 as v2
 from sensor_msgs.msg import LaserScan
 
+import lib.controller.cmd as cmd
+import lib.controller.sub as sub
 from lib.particle import Particle
-import lib.particle as particle
-from lib.particle_filter_base import ParticleFilterBase
 from lib.turtle_bot import TurtlePose
-from lib.util import draw_weighted_sample
-from lib.vector2 import Vector2
+import particle_cloud as pc
 
-# TODO: iterate over weights once then pass weight list around
+### Model ###
 
 
-class ParticleFilter(ParticleFilterBase):
-    def initialize_particle_cloud(
-        self,
-        num_particles: int,
-        occupancy_grid: OccupancyGrid,
-    ) -> List[Particle]:
-        ps = particle.from_occupancy_grid(occupancy_grid, num_particles)
-        print(len(ps))
-        return ps
+@dataclass
+class AwaitMap:
+    pass
 
-    def normalize_particles(self, particle_cloud: List[Particle]) -> List[Particle]:
-        weight_sum = sum([p.weight for p in particle_cloud])
 
-        return [
-            Particle(pose=p.pose, weight=p.weight / weight_sum) for p in particle_cloud
-        ]
+@dataclass
+class AwaitPose:
+    particle_cloud: List[Particle]
 
-    def resample_particles(self, particle_cloud: List[Particle]) -> List[Particle]:
-        weights = [p.weight for p in particle_cloud]
 
-        return draw_weighted_sample(
-            choices=particle_cloud,
-            probabilities=weights,
-            n=len(particle_cloud),
+@dataclass
+class Initialized:
+    particle_cloud: List[Particle]
+    pose_most_recent: TurtlePose
+    pose_last_update: TurtlePose
+
+
+Model = Union[AwaitMap, AwaitPose, Initialized]
+
+init_model: Model = AwaitMap()
+
+### Events ###
+
+
+@dataclass
+class LoadMap:
+    map: OccupancyGrid
+
+
+@dataclass
+class Move:
+    pose: TurtlePose
+
+
+@dataclass
+class Scan:
+    scan: LaserScan
+
+
+Msg = Union[LoadMap, Move, Scan]
+
+### Update ###
+NUM_PARTICLES: int = 10000
+
+LIN_MVMT_THRESH: float = 0.2
+ANG_MVMT_THRESH: float = math.pi / 6.0
+
+
+def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
+    displacement_linear = p1.position - p2.position
+    displacement_angular = abs(p1.yaw - p2.yaw)
+
+    return (displacement_linear, displacement_angular)
+
+
+def update_particle_cloud(
+    particles: List[Particle],
+    disp_linear: Vector2,
+    disp_angular: float,
+    scan: LaserScan,
+) -> List[Particle]:
+    new_poses = pc.update_poses(particles, disp_linear, disp_angular)
+    new_weights = pc.update_weights(new_poses, scan)
+    normalized = pc.normalize(new_weights)
+    resampled = pc.resample(normalized)
+
+    return resampled
+
+
+def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
+    if isinstance(model, AwaitMap) and isinstance(msg, LoadMap):
+        cloud_init = pc.normalize(
+            pc.initialize(num_particles=NUM_PARTICLES, map=msg.map)
         )
 
-    def update_estimated_robot_pose(self, particle_cloud: List[Particle]) -> TurtlePose:
-        def accumulate_components(
-            acc: Tuple[List[Tuple[float, float]], List[float], List[float]],
-            p: Particle,
-        ):
-            (ps, ys, ws) = acc
-            pos_tup = (p.pose.position.x, p.pose.position.y)
+        return (AwaitPose(particle_cloud=cloud_init), cmd.none)
 
-            return ([pos_tup, *ps], [p.pose.yaw, *ys], [p.weight, *ws])
-
-        (positions, yaws, weights) = reduce(
-            accumulate_components,
-            particle_cloud,
-            ([], [], []),
+    if isinstance(model, AwaitPose) and isinstance(msg, Move):
+        return (
+            Initialized(
+                particle_cloud=model.particle_cloud,
+                pose_most_recent=msg.pose,
+                pose_last_update=msg.pose,
+            ),
+            cmd.none,
         )
 
-        avg_position = Vector2(
-            *np.average(positions, axis=0, weights=weights)
-        )  # TODO: which axis ?
-        avg_yaw = np.average(yaws, weights=weights)
+    if isinstance(model, Initialized) and isinstance(msg, Move):
+        return (replace(model, pose_most_recent=msg.pose), cmd.none)
 
-        return TurtlePose(position=avg_position, yaw=avg_yaw)
+    if isinstance(model, Initialized) and isinstance(msg, Scan):
+        (disp_lin, disp_ang) = pose_displacement(
+            p1=model.pose_most_recent,
+            p2=model.pose_last_update,
+        )
 
-    def update_particle_weights_with_measurement_model(
-        self,
-        particle_cloud: List[Particle],
-        laser_scan: LaserScan,
-    ) -> List[Particle]:
-        # TODO
-        return particle_cloud
+        if v2.magnitude(disp_lin) < LIN_MVMT_THRESH and disp_ang < ANG_MVMT_THRESH:
+            return (model, cmd.none)
 
-    def update_particles_with_motion_model(
-        self,
-        particle_cloud: List[Particle],
-        disp_linear: Vector2,
-        disp_angular: float,
-    ) -> List[Particle]:
-        # TODO: Out of bounds check
-        return [
-            particle.translate(p, disp_linear, disp_angular) for p in particle_cloud
-        ]
+        particle_cloud = update_particle_cloud(
+            particles=model.particle_cloud,
+            disp_linear=disp_lin,
+            disp_angular=disp_ang,
+            scan=msg.scan,
+        )
+
+        robot_estimate = pc.estimate_pose(particle_cloud)
+
+        new_model = replace(
+            model,
+            particle_cloud=particle_cloud,
+            pose_last_update=model.pose_most_recent,
+        )
+
+        return (
+            new_model,
+            [
+                cmd.particle_cloud(particle_cloud, frame_id="map"),
+                cmd.estimated_robot_pose(robot_estimate, frame_id="map"),
+            ],
+        )
+
+    return (model, cmd.none)
+
+
+### Subscriptions ###
+
+
+def subscriptions(model: Model) -> List[Sub[Any, Msg]]:
+    if isinstance(model, AwaitMap):
+        return [sub.occupancy_grid(LoadMap)]
+
+    if isinstance(model, AwaitPose):
+        return [sub.odometry(Move)]
+
+    return [sub.odometry(Move), sub.laser_scan(Scan)]
+
+
+### Run ###
+
+
+def run() -> None:
+    rospy.init_node("turtlebot3_particle_filter")
+
+    Controller.run(
+        model=init_model,
+        update=update,
+        subscriptions=subscriptions,
+    )
+
+    rospy.spin()
 
 
 if __name__ == "__main__":
-    ParticleFilter()
-    rospy.spin()
+    run()

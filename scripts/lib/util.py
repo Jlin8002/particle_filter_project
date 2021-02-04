@@ -1,7 +1,7 @@
 from typing import List, TypeVar
 
 from geometry_msgs.msg import Quaternion
-from numpy import ndarray, random
+from numpy import random
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 T = TypeVar("T")

@@ -172,8 +172,8 @@ class ParticleFilterBase(ABC):
         )
 
         if isinstance(self.state, AwaitOdom):
-            particle_cloud = ParticleFilterBase.normalize_particles(
-                particle_cloud=ParticleFilterBase.initialize_particle_cloud(
+            particle_cloud = self.normalize_particles(
+                particle_cloud=self.initialize_particle_cloud(
                     num_particles=ParticleFilterBase.num_particles,
                     occupancy_grid=self.state.grid,
                 ),
@@ -183,6 +183,8 @@ class ParticleFilterBase(ABC):
                 particle_cloud=particle_cloud,
                 pose_previous=pose_current,
             )
+
+            self.publish_particle_cloud(particle_cloud)
 
             return
 
@@ -199,14 +201,14 @@ class ParticleFilterBase(ABC):
         ):
             return
 
-        particle_cloud = ParticleFilterBase.update_particles(
+        particle_cloud = self.update_particles(
             particle_cloud=self.state.particle_cloud,
             disp_linear=disp_lin,
             disp_angular=disp_ang,
             laser_scan=data,
         )
 
-        robot_estimate = ParticleFilterBase.update_estimated_robot_pose(
+        robot_estimate = self.update_estimated_robot_pose(
             particle_cloud,
         )
 
@@ -218,71 +220,70 @@ class ParticleFilterBase(ABC):
         self.publish_particle_cloud(particle_cloud)
         self.publish_estimated_robot_pose(robot_estimate)
 
-    @staticmethod
     def update_particles(
+        self,
         particle_cloud: List[Particle],
         disp_linear: Vector2,
         disp_angular: float,
         laser_scan: LaserScan,
     ) -> List[Particle]:
-        with_motion = ParticleFilterBase.update_particles_with_motion_model(
+        with_motion = self.update_particles_with_motion_model(
             particle_cloud,
             disp_linear,
             disp_angular,
         )
 
-        with_measurement = (
-            ParticleFilterBase.update_particle_weights_with_measurement_model(
-                particle_cloud=with_motion,
-                laser_scan=laser_scan,
-            )
+        with_measurement = self.update_particle_weights_with_measurement_model(
+            particle_cloud=with_motion,
+            laser_scan=laser_scan,
         )
 
-        normalized = ParticleFilterBase.normalize_particles(
+        normalized = self.normalize_particles(
             particle_cloud=with_measurement,
         )
 
-        resampled = ParticleFilterBase.resample_particles(
+        resampled = self.resample_particles(
             particle_cloud=normalized,
         )
 
         return resampled
 
-    @staticmethod
     @abstractmethod
     def initialize_particle_cloud(
-        num_particles: int, occupancy_grid: OccupancyGrid
+        self,
+        num_particles: int,
+        occupancy_grid: OccupancyGrid,
     ) -> List[Particle]:
         pass
 
-    @staticmethod
     @abstractmethod
-    def normalize_particles(particle_cloud: List[Particle]) -> List[Particle]:
+    def normalize_particles(self, particle_cloud: List[Particle]) -> List[Particle]:
         # make all the particle weights sum to 1.0
         pass
 
-    @staticmethod
     @abstractmethod
-    def resample_particles(particle_cloud: List[Particle]) -> List[Particle]:
+    def resample_particles(self, particle_cloud: List[Particle]) -> List[Particle]:
         pass
 
-    @staticmethod
     @abstractmethod
-    def update_estimated_robot_pose(particle_cloud: List[Particle]) -> TurtlePose:
+    def update_estimated_robot_pose(self, particle_cloud: List[Particle]) -> TurtlePose:
         # based on the particles within the particle cloud, update the robot pose estimate
         pass
 
-    @staticmethod
     @abstractmethod
     def update_particle_weights_with_measurement_model(
-        particle_cloud: List[Particle], laser_scan: LaserScan
+        self,
+        particle_cloud: List[Particle],
+        laser_scan: LaserScan,
     ) -> List[Particle]:
         pass
 
-    @staticmethod
     @abstractmethod
     def update_particles_with_motion_model(
-        particle_cloud: List[Particle], disp_linear: Vector2, disp_angular: float
+        self,
+        particle_cloud: List[Particle],
+        disp_linear: Vector2,
+        disp_angular: float,
     ) -> List[Particle]:
         # based on the how the robot has moved (calculated from its odometry), we'll  move
         # all of the particles correspondingly

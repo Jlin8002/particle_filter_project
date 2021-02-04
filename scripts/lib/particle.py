@@ -8,8 +8,9 @@ import numpy.random as random
 from nav_msgs.msg import OccupancyGrid
 
 from lib.turtle_bot import TurtlePose
-from lib.util import draw_uniform_sample
+from lib.util import draw_uniform_sample, yaw_from_quaternion
 from lib.vector2 import Vector2
+import lib.vector2 as v2
 
 
 @dataclass
@@ -25,7 +26,9 @@ class Cell(Enum):
     unknown = -1
 
 
-def translate(particle: Particle, disp_linear: Vector2, disp_angular: float) -> Particle:
+def translate(
+    particle: Particle, disp_linear: Vector2, disp_angular: float
+) -> Particle:
     return replace(
         particle,
         pose=TurtlePose(
@@ -36,7 +39,9 @@ def translate(particle: Particle, disp_linear: Vector2, disp_angular: float) -> 
 
 
 def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particle]:
-    cells_free = [ix for (ix, cell) in enumerate(grid.data) if cell == Cell.free]
+    cells_free = [
+        ix for (ix, c) in enumerate(grid.data) if Cell(c) == Cell.free
+    ]  # TODO: eh
 
     _num_particles = min(len(cells_free), num_particles)
 
@@ -47,19 +52,25 @@ def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particl
 
     rng = random.default_rng()
 
+    origin_pos = v2.from_point(grid.info.origin.position)
+    origin_yaw = yaw_from_quaternion(grid.info.origin.orientation)
+
     def from_cell(index: int) -> Particle:
         col = index % grid.info.width
         row = index // grid.info.width
 
-        position = Vector2(
+        pos_relative = Vector2(
             x=col * grid.info.resolution,
             y=row * grid.info.resolution,
         )
 
-        yaw = rng.uniform(low=0.0, high=2.0 * math.pi)
+        yaw_relative = rng.uniform(low=0.0, high=2.0 * math.pi)
+
+        pos_absolute = pos_relative + origin_pos
+        yaw_absolute = yaw_relative + origin_yaw  # TODO: need to wrap at 2 pi ?
 
         return Particle(
-            pose=TurtlePose(position, yaw),
+            pose=TurtlePose(pos_absolute, yaw_absolute),
             weight=1.0 / _num_particles,
         )
 

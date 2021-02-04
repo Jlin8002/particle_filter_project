@@ -17,8 +17,9 @@ def yaw_from_quaternion(q: Quaternion) -> float:
     return yaw
 
 
-def yaw_to_quaternion(yaw: float) -> ndarray:
-    return quaternion_from_euler(ai=0.0, aj=0.0, ak=yaw)
+def yaw_to_quaternion(yaw: float) -> Quaternion:
+    components = quaternion_from_euler(ai=0.0, aj=0.0, ak=yaw)
+    return Quaternion(*components)
 
 
 def draw_weighted_sample(

@@ -11,6 +11,7 @@ name = "rospypi"
 [packages]
 rospy = "*"
 rospy-util = {editable = true, git = "https://github.com/AHW214/rospy-util.git"}
+kdtree = "*"
 
 [dev-packages]
 black = "*"

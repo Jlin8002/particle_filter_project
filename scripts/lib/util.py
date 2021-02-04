@@ -1,4 +1,4 @@
-from typing import List, TypeVar
+from typing import Iterator, List, Tuple, TypeVar
 
 from geometry_msgs.msg import Quaternion
 from numpy import random
@@ -40,3 +40,12 @@ def draw_weighted_sample(
 
 def draw_uniform_sample(choices: List[T], n: int) -> List[T]:
     return random.default_rng().choice(a=choices, size=n)
+
+
+def enumerate_step(
+    xs: List[T],
+    start: int = 0,
+    step: int = 1,
+) -> Iterator[Tuple[int, T]]:
+    for i in range(start, len(xs), step):
+        yield (i, xs[i])

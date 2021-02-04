@@ -23,6 +23,9 @@ def initialize(num_particles: int, map: OccupancyGrid) -> List[Particle]:
 def normalize(particles: List[Particle]) -> List[Particle]:
     total_weight = sum([p.weight for p in particles])
 
+    if total_weight == 0.0:
+        return particles
+
     return [Particle(pose=p.pose, weight=p.weight / total_weight) for p in particles]
 
 

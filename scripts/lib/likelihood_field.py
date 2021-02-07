@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import kdtree
+import math
 from nav_msgs.msg import OccupancyGrid
 from numpy import ndarray
 import numpy as np
@@ -45,6 +46,10 @@ def closest_to_index(field: LikelihoodField, ix: Tuple[int, int]) -> float:
 
 
 def from_occupancy_grid(grid: OccupancyGrid) -> LikelihoodField:
+    def dist(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
+        ((x1, y1), (x2, y2)) = (p1, p2)
+        return math.sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
+
     def to_pos(ix: int) -> Tuple[int, int]:
         return (ix % grid.info.width, ix // grid.info.width)
 
@@ -58,7 +63,7 @@ def from_occupancy_grid(grid: OccupancyGrid) -> LikelihoodField:
         if c == cell.FREE:
             nearest_occupied: Optional[
                 Tuple[kdtree.Node, float]
-            ] = occupied_tree.search_nn(to_pos(ix))
+            ] = occupied_tree.search_nn(to_pos(ix), dist=dist)
 
             if nearest_occupied is None:
                 return UNKNOWN

@@ -30,7 +30,9 @@ def normalize(particles: List[Particle]) -> List[Particle]:
 
 
 def resample(particles: List[Particle]) -> List[Particle]:
-    # TODO: recomputing weight list in multiple functions
+    if not particles:
+        return []
+
     weights = [p.weight for p in particles]
 
     return draw_weighted_sample(
@@ -60,15 +62,16 @@ def update_weight(
         if dist > 3.5:
             return weight
 
-        dir = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
-        ztk = particle.pose.position + v2.scale(dir, dist)
+        heading = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
+        ztk = particle.pose.position + v2.scale(heading, dist)
 
         closest = lf.closest_to_pos(field, ztk)
         prob = prob_gaussian(closest, sd=0.8)
 
         return weight * prob
 
-    # TODO
+    if particle.weight == 0:
+        return particle
 
     weight = reduce(
         lambda wt, angle_dist: one_range(wt, *angle_dist),
@@ -87,8 +90,8 @@ def update_weights(
     field: LikelihoodField,
     scan: LaserScan,
 ) -> List[Particle]:
-    # return [update_weight(p, field, scan) for p in particles]
-    return particles
+    return [update_weight(p, field, scan) for p in particles]
+    # return particles
 
 
 def update_poses(

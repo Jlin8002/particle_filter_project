@@ -69,7 +69,7 @@ Msg = Union[LoadMap, Move, Scan]
 
 ### Update ###
 
-NUM_PARTICLES: int = 10000
+NUM_PARTICLES: int = 1
 
 LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0

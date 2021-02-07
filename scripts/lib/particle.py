@@ -72,7 +72,7 @@ def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particl
 
         yaw_relative = rng.uniform(low=0.0, high=2.0 * math.pi)
 
-        pos_absolute = pos_relative + origin_pos
+        pos_absolute = Vector2(2, 1.5) #+ origin_pos # pos_relative + origin_pos
         yaw_absolute = yaw_relative + origin_yaw  # TODO: need to wrap at 2 pi ?
 
         return Particle(

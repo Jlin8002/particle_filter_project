@@ -198,7 +198,7 @@
         "rospy-util": {
             "editable": true,
             "git": "https://github.com/AHW214/rospy-util.git",
-            "ref": "f59894720b83c3222ec0c4e59e89586f358bf037"
+            "ref": "f885af8c6b020c471b43692d8e555f34d1ca6aaa"
         },
         "six": {
             "hashes": [

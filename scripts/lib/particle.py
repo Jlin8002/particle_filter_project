@@ -2,7 +2,6 @@ from dataclasses import dataclass, replace
 from typing import List
 
 import math
-import numpy as np
 import numpy.random as random
 from nav_msgs.msg import OccupancyGrid
 from rospy_util.vector2 import Vector2  # pyright: reportMissingTypeStubs=false
@@ -27,14 +26,8 @@ def translate(
     disp_linear: Vector2,
     disp_angular: float,
 ) -> Particle:
-
-    def rotate_vector(v: Vector2, theta: float) -> Vector2:
-        return Vector2(x=((v.x * math.cos(theta)) + (v.y * -math.sin(theta))),
-                       y=((v.x * math.sin(theta)) + (v.y * math.cos(theta))))
-
-
     dir_particle = particle.pose.yaw
-    disp_forward = rotate_vector(disp_linear, dir_particle)
+    disp_forward = v2.rotate(disp_linear, dir_particle)
     pos_new = particle.pose.position + disp_forward
 
     if not lf.at_free_pos(field, pos_new):
@@ -47,7 +40,7 @@ def translate(
 
 
 def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particle]:
-    cells_free = [ix for (ix, c) in enumerate(grid.data) if c == cell.FREE]  # TODO: eh
+    cells_free = [ix for (ix, c) in enumerate(grid.data) if c == cell.FREE]
 
     _num_particles = min(len(cells_free), num_particles)
 
@@ -72,7 +65,7 @@ def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particl
 
         yaw_relative = rng.uniform(low=0.0, high=2.0 * math.pi)
 
-        pos_absolute = Vector2(2, 1.5) #+ origin_pos # pos_relative + origin_pos
+        pos_absolute = pos_relative + origin_pos
         yaw_absolute = yaw_relative + origin_yaw  # TODO: need to wrap at 2 pi ?
 
         return Particle(

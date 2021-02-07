@@ -76,9 +76,12 @@ ANG_MVMT_THRESH: float = math.pi / 6.0
 
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
-    displacement_linear = p1.position - p2.position
-    displacement_angular = abs(p1.yaw - p2.yaw)
-
+    
+    def rotate_vector(v: Vector2, theta: float) -> Vector2:
+        return Vector2(x=((v.x * math.cos(theta)) + (v.y * -math.sin(theta))),
+                       y=((v.x * math.sin(theta)) + (v.y * math.cos(theta))))
+    displacement_linear = rotate_vector((p1.position - p2.position), -p1.yaw)
+    displacement_angular = p1.yaw - p2.yaw
     return (displacement_linear, displacement_angular)
 
 
@@ -133,7 +136,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             p2=model.pose_last_update,
         )
 
-        if v2.magnitude(disp_lin) < LIN_MVMT_THRESH and disp_ang < ANG_MVMT_THRESH:
+        if v2.magnitude(disp_lin) < LIN_MVMT_THRESH and abs(disp_ang) < ANG_MVMT_THRESH:
             return (model, cmd.none)
 
         particle_cloud = update_particle_cloud(

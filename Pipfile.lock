@@ -182,10 +182,10 @@
         },
         "rospkg": {
             "hashes": [
-                "sha256:7494c6c7c268c99c51e9d98b0a9eee82900cfd97408e485c6a4294898d834ad6",
-                "sha256:d57aea0e7fdbf42e8189ef5e21b9fb4f8a70ecb6cd1a56a278eab301f6a2b074"
+                "sha256:307cbc1534fb931d336867bb47f20fffc6698c83a80633bfd4f13ae8671384e3",
+                "sha256:c3b6500ea10bd5f7904127e45731af40ce73a8bfa23d09072ab736c22c283076"
             ],
-            "version": "==1.2.9"
+            "version": "==1.2.10"
         },
         "rospy": {
             "hashes": [
@@ -198,7 +198,7 @@
         "rospy-util": {
             "editable": true,
             "git": "https://github.com/AHW214/rospy-util.git",
-            "ref": "2a0065f066567558b38496480cc1ae75757d6f73"
+            "ref": "f59894720b83c3222ec0c4e59e89586f358bf037"
         },
         "six": {
             "hashes": [

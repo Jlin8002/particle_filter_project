@@ -68,6 +68,7 @@ class Scan:
 Msg = Union[LoadMap, Move, Scan]
 
 ### Update ###
+
 NUM_PARTICLES: int = 10000
 
 LIN_MVMT_THRESH: float = 0.2

@@ -60,6 +60,7 @@ def update_weight(
 ) -> Particle:
     def one_range(weight: float, angle_deg: int, dist: float) -> float:
         if dist > 3.5:
+            # dist = 3.5
             return weight
 
         heading = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
@@ -99,8 +100,11 @@ def update_poses(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
+    noise_linear: float=0.0,
+    noise_angular: float=0.0,
 ) -> List[Particle]:
     return [
-        particle.translate(p, field, disp_linear, disp_angular)
+        particle.translate(p, field, disp_linear, disp_angular,
+            noise_linear, noise_angular)
         for p in particles
     ]

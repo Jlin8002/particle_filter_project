@@ -67,7 +67,7 @@ def update_weight(
         ztk = particle.pose.position + v2.scale(heading, dist)
 
         closest = lf.closest_to_pos(field, ztk)
-        prob = prob_gaussian(closest, sd=0.8)
+        prob = prob_gaussian(closest, sd=0.1)
 
         return weight * prob
 
@@ -100,11 +100,17 @@ def update_poses(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
-    noise_linear: float=0.0,
-    noise_angular: float=0.0,
+    noise_linear: float = 0.0,
+    noise_angular: float = 0.0,
 ) -> List[Particle]:
     return [
-        particle.translate(p, field, disp_linear, disp_angular,
-            noise_linear, noise_angular)
+        particle.translate(
+            p,
+            field,
+            disp_linear,
+            disp_angular,
+            noise_linear,
+            noise_angular,
+        )
         for p in particles
     ]

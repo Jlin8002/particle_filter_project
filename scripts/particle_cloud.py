@@ -96,9 +96,8 @@ def update_poses(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
-    yaw_robot: float,
 ) -> List[Particle]:
     return [
-        particle.translate(p, field, disp_linear, disp_angular, yaw_robot)
+        particle.translate(p, field, disp_linear, disp_angular)
         for p in particles
     ]

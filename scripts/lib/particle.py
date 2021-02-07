@@ -26,13 +26,15 @@ def translate(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
-    yaw_robot: float,
 ) -> Particle:
-    dir_robot = v2.from_angle(yaw_robot)
-    heading = v2.dot(dir_robot, disp_linear)
 
-    dir_particle = v2.from_angle(particle.pose.yaw)
-    disp_forward = v2.scale(dir_particle, np.sign(heading) * v2.magnitude(disp_linear))
+    def rotate_vector(v: Vector2, theta: float) -> Vector2:
+        return Vector2(x=((v.x * math.cos(theta)) + (v.y * -math.sin(theta))),
+                       y=((v.x * math.sin(theta)) + (v.y * math.cos(theta))))
+
+
+    dir_particle = particle.pose.yaw
+    disp_forward = rotate_vector(disp_linear, dir_particle)
     pos_new = particle.pose.position + disp_forward
 
     if not lf.at_free_pos(field, pos_new):

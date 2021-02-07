@@ -74,6 +74,8 @@ NUM_PARTICLES: int = 10000
 LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0
 
+LIN_NOISE: float = 0.3
+ANG_NOISE: float = 0.3
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
     displacement_linear = v2.rotate(p1.position - p2.position, -1.0 * p1.yaw)
@@ -88,7 +90,8 @@ def update_particle_cloud(
     disp_angular: float,
     scan: LaserScan,
 ) -> List[Particle]:
-    new_poses = pc.update_poses(particles, field, disp_linear, disp_angular)
+    new_poses = pc.update_poses(particles, field, disp_linear, disp_angular,
+        LIN_NOISE, ANG_NOISE)
     new_weights = pc.update_weights(new_poses, field, scan)
     normalized = pc.normalize(new_weights)
     resampled = pc.resample(normalized)

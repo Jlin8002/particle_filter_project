@@ -69,18 +69,14 @@ Msg = Union[LoadMap, Move, Scan]
 
 ### Update ###
 
-NUM_PARTICLES: int = 1
+NUM_PARTICLES: int = 10000
 
 LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0
 
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
-    
-    def rotate_vector(v: Vector2, theta: float) -> Vector2:
-        return Vector2(x=((v.x * math.cos(theta)) + (v.y * -math.sin(theta))),
-                       y=((v.x * math.sin(theta)) + (v.y * math.cos(theta))))
-    displacement_linear = rotate_vector((p1.position - p2.position), -p1.yaw)
+    displacement_linear = v2.rotate(p1.position - p2.position, -1.0 * p1.yaw)
     displacement_angular = p1.yaw - p2.yaw
     return (displacement_linear, displacement_angular)
 
@@ -113,7 +109,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
                 likelihood_field=likelihood_field,
                 particle_cloud=cloud_init,
             ),
-            cmd.none,
+            [cmd.particle_cloud(cloud_init, frame_id="map")],
         )
 
     if isinstance(model, AwaitPose) and isinstance(msg, Move):

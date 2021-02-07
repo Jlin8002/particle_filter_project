@@ -24,7 +24,7 @@ def normalize(particles: List[Particle]) -> List[Particle]:
     total_weight = sum([p.weight for p in particles])
 
     if total_weight == 0.0:
-        return particles
+        return []
 
     return [Particle(pose=p.pose, weight=p.weight / total_weight) for p in particles]
 
@@ -96,5 +96,9 @@ def update_poses(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
+    yaw_robot: float,
 ) -> List[Particle]:
-    return [particle.translate(p, field, disp_linear, disp_angular) for p in particles]
+    return [
+        particle.translate(p, field, disp_linear, disp_angular, yaw_robot)
+        for p in particles
+    ]

@@ -1,7 +1,7 @@
 from typing import Iterator, List, Tuple, TypeVar
 
 from geometry_msgs.msg import Quaternion
-from numpy import random
+from numpy import random, sqrt
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 T = TypeVar("T")
@@ -40,6 +40,11 @@ def draw_weighted_sample(
 
 def draw_uniform_sample(choices: List[T], n: int) -> List[T]:
     return random.default_rng().choice(a=choices, size=n)
+
+
+def points_dist(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
+    ((x1, y1), (x2, y2)) = (p1, p2)
+    return sqrt(((x2 - x1) ** 2) + ((y2 - y1) ** 2))
 
 
 def enumerate_step(

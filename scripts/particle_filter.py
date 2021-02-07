@@ -74,8 +74,8 @@ NUM_PARTICLES: int = 10000
 LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0
 
-LIN_NOISE: float = 0.3
-ANG_NOISE: float = 0.3
+LIN_NOISE: float = 0.1
+ANG_NOISE: float = 0.1
 
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
@@ -91,9 +91,16 @@ def update_particle_cloud(
     disp_angular: float,
     scan: LaserScan,
 ) -> List[Particle]:
+    # TODO: compose update_pose + update_weight for single pass
     new_poses = pc.update_poses(
-        particles, field, disp_linear, disp_angular, LIN_NOISE, ANG_NOISE
+        particles,
+        field,
+        disp_linear,
+        disp_angular,
+        LIN_NOISE,
+        ANG_NOISE,
     )
+
     new_weights = pc.update_weights(new_poses, field, scan)
     normalized = pc.normalize(new_weights)
     resampled = pc.resample(normalized)
@@ -114,7 +121,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
                 likelihood_field=likelihood_field,
                 particle_cloud=cloud_init,
             ),
-            [cmd.particle_cloud(cloud_init, frame_id="map")],
+            [cmd.init_particle_cloud(cloud_init, frame_id="map")],
         )
 
     if isinstance(model, AwaitPose) and isinstance(msg, Move):
@@ -159,7 +166,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
         return (
             new_model,
             [
-                cmd.particle_cloud(particle_cloud, frame_id="map"),
+                cmd.update_particle_cloud(particle_cloud, frame_id="map"),
                 cmd.estimated_robot_pose(robot_estimate, frame_id="map"),
             ],
         )

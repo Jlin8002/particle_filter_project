@@ -26,23 +26,29 @@ UNKNOWN: float = -1.0
 
 
 def at_free_pos(field: LikelihoodField, pos: Vector2) -> bool:
-    return closest_to_pos(field, pos) > 0.0
+    if (dist := closest_to_pos(field, pos)) is None:
+        return False
+    return dist > 0.0
 
 
 def closest_to_pos(field: LikelihoodField, pos: Vector2) -> float:
     row = round((pos.y - field.origin.y) / field.resolution)
     col = round((pos.x - field.origin.x) / field.resolution)
 
-    return closest_to_index(field, (row, col)) * field.resolution
+    if (dist := closest_to_index(field, (row, col))) is None:
+        return None
+    return dist * field.resolution
 
 
 def closest_to_index(field: LikelihoodField, ix: Tuple[int, int]) -> float:
     (row, col) = ix
 
     if row < 0 or row >= field.height or col < 0 or col >= field.width:
-        return UNKNOWN
+        return None
 
-    return field.field[row][col]
+    if (dist := field.field[row][col]) == UNKNOWN:
+        return None
+    return dist
 
 
 def from_occupancy_grid(grid: OccupancyGrid) -> LikelihoodField:

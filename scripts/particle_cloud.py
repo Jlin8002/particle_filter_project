@@ -1,7 +1,7 @@
 from dataclasses import replace
-from functools import reduce
+from functools import partial, reduce
 import math
-from typing import List, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
@@ -14,7 +14,7 @@ import lib.likelihood_field as lf
 from lib.particle import Particle
 import lib.particle as particle
 from lib.turtle_bot import TurtlePose
-from lib.util import draw_weighted_sample, enumerate_step
+from lib.util import compose_many, draw_weighted_sample, enumerate_step
 
 
 def initialize(num_particles: int, map: OccupancyGrid) -> List[Particle]:
@@ -43,7 +43,7 @@ def resample(particles: List[Particle]) -> List[Particle]:
     )
 
 
-def estimate_pose(particles: List[Particle]) -> TurtlePose:
+def estimate_pose(particles: List[Particle]) -> Optional[TurtlePose]:
     def accumulate_components(
         acc: Tuple[List[Tuple[float, float]], List[float], List[float]],
         p: Particle,
@@ -58,6 +58,9 @@ def estimate_pose(particles: List[Particle]) -> TurtlePose:
         ([], [], []),
     )
 
+    if sum(weights) == 0.0:
+        return None
+
     avg_position = Vector2(*np.average(positions, axis=0, weights=weights))
     avg_yaw = np.average(yaws, weights=weights)
 
@@ -71,29 +74,30 @@ def prob_gaussian(dist: float, sd: float) -> float:
 
 
 def update_weight(
-    particle: Particle,
     field: LikelihoodField,
     scan: LaserScan,
-    sd: float=0.1,
+    sd: float,
+    particle: Particle,
 ) -> Particle:
+    if particle.weight == 0.0:
+        return particle
+
     unknown_factor = 1 / (prob_gaussian(0, sd) ** 2)
+
     def one_range(weight: float, angle_deg: int, dist: float, sd: float) -> float:
         if dist >= 3.5:
-            return weight #* unknown_factor
+            return weight
 
         heading = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
         ztk = particle.pose.position + v2.scale(heading, dist)
 
-        closest = lf.closest_to_pos(field, ztk)
-        if closest is None:
+        if (closest := lf.closest_to_pos(field, ztk)) is None:
             return weight * unknown_factor
-            
+
         prob = prob_gaussian(closest, sd=sd)
-        
+
         return weight * prob
-    
-    if particle.weight == 0:
-        return particle
+
     weight = reduce(
         lambda wt, angle_dist: one_range(wt, *angle_dist, sd),
         enumerate_step(
@@ -105,31 +109,24 @@ def update_weight(
     return replace(particle, weight=weight)
 
 
-def update_weights(
-    particles: List[Particle],
+def update_poses_and_weights(
     field: LikelihoodField,
     scan: LaserScan,
-    sd: float=0.1,
-) -> List[Particle]:
-    return [update_weight(p, field, scan, sd) for p in particles]
-
-
-def update_poses(
-    particles: List[Particle],
-    field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
-    noise_linear: float = 0.0,
-    noise_angular: float = 0.0,
+    noise_linear: float,
+    noise_angular: float,
+    sd_obstacle_dist: float,
+    particles: List[Particle],
 ) -> List[Particle]:
-    return [
-        particle.translate(
-            p,
-            field,
-            disp_linear,
-            disp_angular,
-            noise_linear,
-            noise_angular,
-        )
-        for p in particles
-    ]
+    up_pose: Callable[[Particle], Particle] = compose_many(
+        partial(particle.sanitize, field),
+        partial(particle.wiggle, noise_linear, noise_angular),
+        partial(particle.translate, disp_linear, disp_angular),
+    )
+
+    up_weight: Callable[[Particle], Particle] = partial(
+        update_weight, field, scan, sd_obstacle_dist
+    )
+
+    return [up_weight(up_pose(p)) for p in particles]

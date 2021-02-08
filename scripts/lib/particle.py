@@ -18,44 +18,42 @@ from lib.util import draw_uniform_sample, yaw_from_quaternion
 class Particle:
     pose: TurtlePose
     weight: float
-    
+
     def __str__(self) -> str:
         pos = self.pose.position
         yaw = self.pose.yaw
         weight = self.weight
-        
+
         return f"{{Pos: ({pos.x}, {pos.y}), Yaw: {yaw}, Wt: {weight}}}"
 
 
-def translate(
-    particle: Particle,
-    field: LikelihoodField,
-    disp_linear: Vector2,
-    disp_angular: float,
-    noise_linear: float = 0.0,
-    noise_angular: float = 0.0,
-) -> Particle:
-    dir_particle = particle.pose.yaw
-    disp_forward = v2.rotate(disp_linear, dir_particle)
-    pos_new = particle.pose.position + disp_forward
+def translate(disp_linear: Vector2, disp_angular: float, p: Particle) -> Particle:
+    disp_forward = v2.rotate(disp_linear, p.pose.yaw)
 
-    if not lf.at_free_pos(field, pos_new):
-        return replace(particle, weight=0.0)
-
-    yaw_new = particle.pose.yaw + disp_angular
-
-    if noise_linear:
-        pos_new = pos_new + Vector2(
-            x=random.normal(scale=noise_linear),
-            y=random.normal(scale=noise_linear),
-        )
-
-    if noise_angular:
-        yaw_new = yaw_new + random.normal(scale=noise_angular)
+    pos_new = p.pose.position + disp_forward
+    yaw_new = p.pose.yaw + disp_angular
 
     pose_new = TurtlePose(pos_new, yaw_new)
 
-    return replace(particle, pose=pose_new)
+    return replace(p, pose=pose_new)
+
+
+def wiggle(
+    noise_linear: float,
+    noise_angular: float,
+    p: Particle,
+) -> Particle:
+
+    pos_new = p.pose.position + Vector2(*random.normal(scale=noise_linear, size=2))
+    yaw_new = p.pose.yaw + random.normal(scale=noise_angular)
+
+    pose_new = TurtlePose(pos_new, yaw_new)
+
+    return replace(p, pose=pose_new)
+
+
+def sanitize(field: LikelihoodField, p: Particle) -> Particle:
+    return p if lf.at_free_pos(field, p.pose.position) else replace(p, weight=0.0)
 
 
 def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particle]:
@@ -85,7 +83,7 @@ def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particl
         yaw_relative = rng.uniform(low=0.0, high=2.0 * math.pi)
 
         pos_absolute = pos_relative + origin_pos
-        yaw_absolute = yaw_relative + origin_yaw  # TODO: need to wrap at 2 pi ?
+        yaw_absolute = yaw_relative + origin_yaw
 
         return Particle(
             pose=TurtlePose(pos_absolute, yaw_absolute),

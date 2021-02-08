@@ -1,9 +1,10 @@
 from dataclasses import replace
 from functools import reduce
 import math
-from typing import List
+from typing import List, Tuple
 
 from nav_msgs.msg import OccupancyGrid
+import numpy as np
 from rospy_util.vector2 import Vector2  # pyright: reportMissingTypeStubs=false
 import rospy_util.vector2 as v2
 from sensor_msgs.msg import LaserScan
@@ -43,8 +44,24 @@ def resample(particles: List[Particle]) -> List[Particle]:
 
 
 def estimate_pose(particles: List[Particle]) -> TurtlePose:
-    # TODO
-    return TurtlePose(position=Vector2(0.0, 0.0), yaw=0.0)
+    def accumulate_components(
+        acc: Tuple[List[Tuple[float, float]], List[float], List[float]],
+        p: Particle,
+    ):
+        (ps, ys, ws) = acc
+        pos = (p.pose.position.x, p.pose.position.y)
+        return ([pos, *ps], [p.pose.yaw, *ys], [p.weight, *ws])
+
+    (positions, yaws, weights) = reduce(
+        accumulate_components,
+        particles,
+        ([], [], []),
+    )
+
+    avg_position = Vector2(*np.average(positions, axis=0, weights=weights))
+    avg_yaw = np.average(yaws, weights=weights)
+
+    return TurtlePose(position=avg_position, yaw=avg_yaw)
 
 
 def prob_gaussian(dist: float, sd: float) -> float:

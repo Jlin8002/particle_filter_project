@@ -18,6 +18,13 @@ from lib.util import draw_uniform_sample, yaw_from_quaternion
 class Particle:
     pose: TurtlePose
     weight: float
+    
+    def __str__(self) -> str:
+        pos = self.pose.position
+        yaw = self.pose.yaw
+        weight = self.weight
+        
+        return f"{{Pos: ({pos.x}, {pos.y}), Yaw: {yaw}, Wt: {weight}}}"
 
 
 def translate(

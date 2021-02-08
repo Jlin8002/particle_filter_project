@@ -69,7 +69,7 @@ Msg = Union[LoadMap, Move, Scan]
 
 ### Update ###
 
-NUM_PARTICLES: int = 100
+NUM_PARTICLES: int = 10000
 
 LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0
@@ -92,7 +92,6 @@ def update_particle_cloud(
     disp_angular: float,
     scan: LaserScan,
 ) -> List[Particle]:
-    print("UPDATE")
     # TODO: compose update_pose + update_weight for single pass
     new_poses = pc.update_poses(
         particles,

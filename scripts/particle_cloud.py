@@ -61,8 +61,8 @@ def update_weight(
 ) -> Particle:
     unknown_factor = 1 / (prob_gaussian(0, sd) ** 2)
     def one_range(weight: float, angle_deg: int, dist: float, sd: float) -> float:
-        if dist > 3.5:
-            return weight * unknown_factor
+        if dist >= 3.5:
+            return weight #* unknown_factor
 
         heading = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
         ztk = particle.pose.position + v2.scale(heading, dist)

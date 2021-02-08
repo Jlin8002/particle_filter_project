@@ -106,11 +106,17 @@ def update_poses(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
-    noise_linear: float=0.0,
-    noise_angular: float=0.0,
+    noise_linear: float = 0.0,
+    noise_angular: float = 0.0,
 ) -> List[Particle]:
     return [
-        particle.translate(p, field, disp_linear, disp_angular,
-            noise_linear, noise_angular)
+        particle.translate(
+            p,
+            field,
+            disp_linear,
+            disp_angular,
+            noise_linear,
+            noise_angular,
+        )
         for p in particles
     ]

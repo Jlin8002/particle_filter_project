@@ -3,8 +3,9 @@
 # pyright: reportMissingTypeStubs=false
 
 from dataclasses import dataclass, replace
+from functools import partial
 import math
-from typing import Any, List, Union, Tuple
+from typing import Any, Callable, List, Union, Tuple
 
 from nav_msgs.msg import OccupancyGrid
 import rospy
@@ -19,6 +20,7 @@ from lib.likelihood_field import LikelihoodField
 import lib.likelihood_field as lf
 from lib.particle import Particle
 from lib.turtle_bot import TurtlePose
+from lib.util import compose_many
 import particle_cloud as pc
 
 ### Model ###
@@ -71,13 +73,14 @@ Msg = Union[LoadMap, Move, Scan]
 
 NUM_PARTICLES: int = 10000
 
-LIN_MVMT_THRESH: float = 0.2
-ANG_MVMT_THRESH: float = math.pi / 6.0
+MVMT_THRESH_LIN: float = 0.2
+MVMT_THRESH_ANG: float = math.pi / 6.0
 
-LIN_NOISE: float = 0.1
-ANG_NOISE: float = 0.2
+NOISE_LIN: float = 0.1
+NOISE_ANG: float = 0.2
 
-GAUSS_SD: float = 0.1
+OBSTACLE_DIST_SD: float = 0.1
+
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
     displacement_linear = v2.rotate(p1.position - p2.position, -1.0 * p1.yaw)
@@ -92,21 +95,20 @@ def update_particle_cloud(
     disp_angular: float,
     scan: LaserScan,
 ) -> List[Particle]:
-    # TODO: compose update_pose + update_weight for single pass
-    new_poses = pc.update_poses(
-        particles,
-        field,
-        disp_linear,
-        disp_angular,
-        LIN_NOISE,
-        ANG_NOISE,
-    )
-
-    new_weights = pc.update_weights(new_poses, field, scan, GAUSS_SD)
-    normalized = pc.normalize(new_weights)
-    resampled = pc.resample(normalized)
-
-    return resampled
+    return compose_many(
+        pc.resample,
+        pc.normalize,
+        partial(
+            pc.update_poses_and_weights,
+            field,
+            scan,
+            disp_linear,
+            disp_angular,
+            NOISE_LIN,
+            NOISE_ANG,
+            OBSTACLE_DIST_SD,
+        ),
+    )(particles)
 
 
 def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
@@ -145,7 +147,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             p2=model.pose_last_update,
         )
 
-        if v2.magnitude(disp_lin) < LIN_MVMT_THRESH and abs(disp_ang) < ANG_MVMT_THRESH:
+        if v2.magnitude(disp_lin) < MVMT_THRESH_LIN and abs(disp_ang) < MVMT_THRESH_ANG:
             return (model, cmd.none)
 
         particle_cloud = update_particle_cloud(
@@ -168,7 +170,11 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             new_model,
             [
                 cmd.update_particle_cloud(particle_cloud, frame_id="map"),
-                cmd.estimated_robot_pose(robot_estimate, frame_id="map"),
+                *(
+                    [cmd.estimated_robot_pose(robot_estimate, frame_id="map")]
+                    if robot_estimate is not None
+                    else cmd.none
+                ),
             ],
         )
 

@@ -28,19 +28,21 @@ UNKNOWN: float = -1.0
 def at_free_pos(field: LikelihoodField, pos: Vector2) -> bool:
     if (dist := closest_to_pos(field, pos)) is None:
         return False
+
     return dist > 0.0
 
 
-def closest_to_pos(field: LikelihoodField, pos: Vector2) -> float:
+def closest_to_pos(field: LikelihoodField, pos: Vector2) -> Optional[float]:
     row = round((pos.y - field.origin.y) / field.resolution)
     col = round((pos.x - field.origin.x) / field.resolution)
 
     if (dist := closest_to_index(field, (row, col))) is None:
         return None
+
     return dist * field.resolution
 
 
-def closest_to_index(field: LikelihoodField, ix: Tuple[int, int]) -> float:
+def closest_to_index(field: LikelihoodField, ix: Tuple[int, int]) -> Optional[float]:
     (row, col) = ix
 
     if row < 0 or row >= field.height or col < 0 or col >= field.width:
@@ -48,6 +50,7 @@ def closest_to_index(field: LikelihoodField, ix: Tuple[int, int]) -> float:
 
     if (dist := field.field[row][col]) == UNKNOWN:
         return None
+
     return dist
 
 

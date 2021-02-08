@@ -69,13 +69,15 @@ Msg = Union[LoadMap, Move, Scan]
 
 ### Update ###
 
-NUM_PARTICLES: int = 10000
+NUM_PARTICLES: int = 100
 
 LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0
 
-LIN_NOISE: float = 0.3
-ANG_NOISE: float = 0.3
+LIN_NOISE: float = 0.1
+ANG_NOISE: float = 0.1
+
+GAUSS_SD: float = 0.1
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
     displacement_linear = v2.rotate(p1.position - p2.position, -1.0 * p1.yaw)
@@ -90,9 +92,10 @@ def update_particle_cloud(
     disp_angular: float,
     scan: LaserScan,
 ) -> List[Particle]:
+    print("UPDATE")
     new_poses = pc.update_poses(particles, field, disp_linear, disp_angular,
         LIN_NOISE, ANG_NOISE)
-    new_weights = pc.update_weights(new_poses, field, scan)
+    new_weights = pc.update_weights(new_poses, field, scan, GAUSS_SD)
     normalized = pc.normalize(new_weights)
     resampled = pc.resample(normalized)
 

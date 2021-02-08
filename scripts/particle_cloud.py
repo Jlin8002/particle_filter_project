@@ -57,25 +57,30 @@ def update_weight(
     particle: Particle,
     field: LikelihoodField,
     scan: LaserScan,
+    sd: float=0.1,
 ) -> Particle:
-    def one_range(weight: float, angle_deg: int, dist: float) -> float:
+    def one_range(weight: float, angle_deg: int, dist: float, sd: float) -> float:
         if dist > 3.5:
-            # dist = 3.5
+            #dist = 3.5
+            print("3.5: ", weight)
             return weight
 
         heading = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
         ztk = particle.pose.position + v2.scale(heading, dist)
 
         closest = lf.closest_to_pos(field, ztk)
-        prob = prob_gaussian(closest, sd=0.8)
-
+        print("angle: ", angle_deg)
+        print("LF: ", closest)
+        prob = prob_gaussian(closest, sd=sd)
+        
+        print("WP: ", weight* prob)
         return weight * prob
 
     if particle.weight == 0:
         return particle
-
+    print("reducing... ")
     weight = reduce(
-        lambda wt, angle_dist: one_range(wt, *angle_dist),
+        lambda wt, angle_dist: one_range(wt, *angle_dist, sd),
         enumerate_step(
             xs=scan.ranges,
             step=36,
@@ -90,8 +95,9 @@ def update_weights(
     particles: List[Particle],
     field: LikelihoodField,
     scan: LaserScan,
+    sd: float=0.1,
 ) -> List[Particle]:
-    return [update_weight(p, field, scan) for p in particles]
+    return [update_weight(p, field, scan, sd) for p in particles]
     # return particles
 
 

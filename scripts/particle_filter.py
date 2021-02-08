@@ -75,7 +75,7 @@ LIN_MVMT_THRESH: float = 0.2
 ANG_MVMT_THRESH: float = math.pi / 6.0
 
 LIN_NOISE: float = 0.1
-ANG_NOISE: float = 0.1
+ANG_NOISE: float = 0.2
 
 GAUSS_SD: float = 0.1
 

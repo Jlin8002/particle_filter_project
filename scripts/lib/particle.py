@@ -25,8 +25,8 @@ def translate(
     field: LikelihoodField,
     disp_linear: Vector2,
     disp_angular: float,
-    noise_linear: float=0.0,
-    noise_angular: float=0.0,
+    noise_linear: float = 0.0,
+    noise_angular: float = 0.0,
 ) -> Particle:
     dir_particle = particle.pose.yaw
     disp_forward = v2.rotate(disp_linear, dir_particle)
@@ -38,8 +38,10 @@ def translate(
     yaw_new = particle.pose.yaw + disp_angular
 
     if noise_linear:
-        pos_new = pos_new + Vector2(x=random.normal(scale=noise_linear),
-                                    y=random.normal(scale=noise_linear))
+        pos_new = pos_new + Vector2(
+            x=random.normal(scale=noise_linear),
+            y=random.normal(scale=noise_linear),
+        )
 
     if noise_angular:
         yaw_new = yaw_new + random.normal(scale=noise_angular)

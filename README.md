@@ -58,3 +58,24 @@
 
 ### Wednesday, February 10th
 - Write-up and videos finished
+
+## Objectives
+Our goal is to implement a particle filter to learn about the processes involved in robot localization. We will then apply our particle filter to a scenario in which a robot needs to ascertain its position in order to properly navigate out of a room.
+
+## High-level description
+Our implementation uses a particle filter and likelihood field to compare a robot's laser scan readings to a map of its surroundings. After initializing the particle cloud, we update each of the particle poses and resample them as the robot moves throughout the map. During a single update, we calculate the robot's translational and rotational displacement from the previous update and apply the displacements (with a small amount of noise) to each of the particles. We then check the robot's laser scan measurements against a particle's surroundings and use a likelihood field to calculate the probability of a given particle being in the same position as the robot. Once all the particles have been updated, we resample our particles based on those probabilities to converge on a location near the robot's actual position.
+
+## Main steps
+- Movement: particle_cloud.py (update_poses)
+- Weight computation: particle_cloud.py (update_weights)
+- Resampling: particle_cloud.py (resample)
+
+## Challenges
+We faced challenges when figuring out how to deal with laser scan values greater than 3.5 and likelihood field lookups falling outside of the map. We knew that both scenarios would involve either skipping a measurement or applying a penalty to the weights, but we weren't sure what form that would take until we tried implementing them. Luckily, we quickly ascertained that skipping measurements greater than 3.5 and applying a penalty to unknown likelihood field values would give us a particle filter with decent convergence behavior.  
+
+## Future work
+If we had more time, we would implement a beam measurement model to compare its performance to our likelihood field model. We recognize that the beam model may improve the behavior of particles near the walls of the map: Scaling particle weights by the scan distance error instead of applying a flat penalty as we currently do will preserve particles that fall between the robot and a wall.
+
+## Takeaways
+- 
+- 

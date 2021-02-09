@@ -5,7 +5,7 @@
 from dataclasses import dataclass, replace
 from functools import partial
 import math
-from typing import Any, Callable, List, Union, Tuple
+from typing import Any, List, Union, Tuple
 
 from nav_msgs.msg import OccupancyGrid
 import rospy
@@ -77,9 +77,11 @@ MVMT_THRESH_LIN: float = 0.2
 MVMT_THRESH_ANG: float = math.pi / 6.0
 
 NOISE_LIN: float = 0.1
-NOISE_ANG: float = 0.2
+NOISE_ANG: float = 0.4
 
-OBSTACLE_DIST_SD: float = 0.1
+OBSTACLE_DIST_SD: float = 0.15
+
+NUM_RANGES: int = 6
 
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
@@ -107,6 +109,7 @@ def update_particle_cloud(
             NOISE_LIN,
             NOISE_ANG,
             OBSTACLE_DIST_SD,
+            NUM_RANGES,
         ),
     )(particles)
 

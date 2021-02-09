@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from functools import partial, reduce
 import math
 from typing import Callable, List, Optional, Tuple
@@ -14,7 +14,15 @@ import lib.likelihood_field as lf
 from lib.particle import Particle
 import lib.particle as particle
 from lib.turtle_bot import TurtlePose
-from lib.util import compose_many, draw_weighted_sample, enumerate_step
+from lib.util import compose_many, draw_weighted_sample
+
+DIST_MAX: float = 3.5
+
+
+@dataclass
+class Range:
+    angle: int
+    dist: float
 
 
 def initialize(num_particles: int, map: OccupancyGrid) -> List[Particle]:
@@ -73,9 +81,15 @@ def prob_gaussian(dist: float, sd: float) -> float:
     return prob
 
 
+def interesting_ranges(ranges: List[float]) -> List[Range]:
+    return [
+        Range(angle, dist) for (angle, dist) in enumerate(ranges) if dist < DIST_MAX
+    ]
+
+
 def update_weight(
     field: LikelihoodField,
-    scan: LaserScan,
+    ranges: List[Range],
     sd: float,
     particle: Particle,
 ) -> Particle:
@@ -84,12 +98,12 @@ def update_weight(
 
     unknown_factor = 1 / (prob_gaussian(0, sd) ** 2)
 
-    def one_range(weight: float, angle_deg: int, dist: float, sd: float) -> float:
-        if dist >= 3.5:
+    def one_range(weight: float, range: Range, sd: float) -> float:
+        if range.dist >= DIST_MAX:
             return weight
 
-        heading = v2.from_angle(particle.pose.yaw + math.radians(angle_deg))
-        ztk = particle.pose.position + v2.scale(heading, dist)
+        heading = v2.from_angle(particle.pose.yaw + math.radians(range.angle))
+        ztk = particle.pose.position + v2.scale(heading, range.dist)
 
         if (closest := lf.closest_to_pos(field, ztk)) is None:
             return weight * unknown_factor
@@ -99,13 +113,11 @@ def update_weight(
         return weight * prob
 
     weight = reduce(
-        lambda wt, angle_dist: one_range(wt, *angle_dist, sd),
-        enumerate_step(
-            xs=scan.ranges,
-            step=36,
-        ),
+        lambda wt, range: one_range(wt, range, sd),
+        ranges,
         1.0,
     )
+
     return replace(particle, weight=weight)
 
 
@@ -117,6 +129,7 @@ def update_poses_and_weights(
     noise_linear: float,
     noise_angular: float,
     sd_obstacle_dist: float,
+    num_ranges: int,
     particles: List[Particle],
 ) -> List[Particle]:
     up_pose: Callable[[Particle], Particle] = compose_many(
@@ -125,8 +138,17 @@ def update_poses_and_weights(
         partial(particle.translate, disp_linear, disp_angular),
     )
 
+    ranges = interesting_ranges(scan.ranges)
+    ranges_to_check = [
+        ranges[round(i)]
+        for i in np.linspace(0, len(ranges) - 1, num_ranges, endpoint=False)
+    ]
+
     up_weight: Callable[[Particle], Particle] = partial(
-        update_weight, field, scan, sd_obstacle_dist
+        update_weight,
+        field,
+        ranges_to_check,
+        sd_obstacle_dist,
     )
 
     return [up_weight(up_pose(p)) for p in particles]

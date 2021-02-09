@@ -9,17 +9,15 @@ from typing import Any, List, Union, Tuple
 
 from nav_msgs.msg import OccupancyGrid
 import rospy
-from rospy_util.controller import Cmd, Controller, Sub
 from rospy_util.vector2 import Vector2
 import rospy_util.vector2 as v2
 from sensor_msgs.msg import LaserScan
 
-import lib.controller.cmd as cmd
-import lib.controller.sub as sub
+from lib.controller import Cmd, Controller, Sub, cmd, sub
 from lib.likelihood_field import LikelihoodField
 import lib.likelihood_field as lf
 from lib.particle import Particle
-from lib.turtle_bot import TurtlePose
+from lib.turtle_pose import TurtlePose
 from lib.util import compose_many
 import particle_cloud as pc
 
@@ -174,7 +172,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             [
                 cmd.update_particle_cloud(particle_cloud, frame_id="map"),
                 *(
-                    [cmd.estimated_robot_pose(robot_estimate, frame_id="map")]
+                    [cmd.update_estimated_robot_pose(robot_estimate, frame_id="map")]
                     if robot_estimate is not None
                     else cmd.none
                 ),

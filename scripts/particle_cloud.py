@@ -13,7 +13,7 @@ from lib.likelihood_field import LikelihoodField
 import lib.likelihood_field as lf
 from lib.particle import Particle
 import lib.particle as particle
-from lib.turtle_bot import TurtlePose
+from lib.turtle_pose import TurtlePose
 from lib.util import compose_many, draw_weighted_sample
 
 DIST_MAX: float = 3.5

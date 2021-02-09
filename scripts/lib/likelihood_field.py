@@ -1,3 +1,5 @@
+# pyright: reportMissingTypeStubs=false
+
 from dataclasses import dataclass
 from typing import Optional, Tuple
 

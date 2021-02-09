@@ -1,21 +1,36 @@
+"""
+Particles for the particle cloud.
+"""
+
+# pyright: reportMissingTypeStubs=false
+
 from dataclasses import dataclass, replace
 from typing import List
 
 import math
 import numpy.random as random
 from nav_msgs.msg import OccupancyGrid
-from rospy_util.vector2 import Vector2  # pyright: reportMissingTypeStubs=false
+from rospy_util.vector2 import Vector2
 import rospy_util.vector2 as v2
 
 import lib.cell as cell
 from lib.likelihood_field import LikelihoodField
 import lib.likelihood_field as lf
-from lib.turtle_bot import TurtlePose
+from lib.turtle_pose import TurtlePose
 from lib.util import draw_uniform_sample, yaw_from_quaternion
 
 
 @dataclass
 class Particle:
+    """
+    A particle representing a possible pose of the robot during localization.
+
+    @attribute `pose`: The pose (2D position and yaw) of the particle.
+
+    @attribute `weight`: The estimated probability that the particle represents
+    the true location of the robot. In the range [0.0, 1.0] when normalized.
+    """
+
     pose: TurtlePose
     weight: float
 

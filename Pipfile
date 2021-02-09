@@ -1,0 +1,23 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[[source]]
+url = "https://rospypi.github.io/simple/"
+verify_ssl = true
+name = "rospypi"
+
+[packages]
+rospy = "*"
+rospy-util = {editable = true, git = "https://github.com/AHW214/rospy-util.git"}
+kdtree = "*"
+
+[dev-packages]
+black = "*"
+
+[requires]
+python_version = "3.8"
+
+[pipenv]
+allow_prereleases = true

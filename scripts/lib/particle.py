@@ -39,10 +39,13 @@ class Particle:
         yaw = self.pose.yaw
         weight = self.weight
 
-        return f"{{Pos: ({pos.x}, {pos.y}), Yaw: {yaw}, Wt: {weight}}}"
+        return f"{{pos: ({pos.x}, {pos.y}), yaw: {yaw}, wt: {weight}}}"
 
 
 def translate(disp_linear: Vector2, disp_angular: float, p: Particle) -> Particle:
+    """
+    Translate a particle by the given linear and angular displacements.
+    """
     disp_forward = v2.rotate(disp_linear, p.pose.yaw)
 
     pos_new = p.pose.position + disp_forward
@@ -58,7 +61,9 @@ def wiggle(
     noise_angular: float,
     p: Particle,
 ) -> Particle:
-
+    """
+    Wiggle the pose of a particle by the given linear and angular noise factors.
+    """
     pos_new = p.pose.position + Vector2(*random.normal(scale=noise_linear, size=2))
     yaw_new = p.pose.yaw + random.normal(scale=noise_angular)
 
@@ -68,14 +73,23 @@ def wiggle(
 
 
 def sanitize(field: LikelihoodField, p: Particle) -> Particle:
+    """
+    Zero the weight of a particle if it is not within the bounds of the likelihood
+    field.
+    """
     return p if lf.at_free_pos(field, p.pose.position) else replace(p, weight=0.0)
 
 
 def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particle]:
+    """
+    Create a particle cloud of size `num_particles` from the given occupancy grid.
+    """
     cells_free = [ix for (ix, c) in enumerate(grid.data) if c == cell.FREE]
 
+    # Use no more than the number of free cells as the number of particles.
     _num_particles = min(len(cells_free), num_particles)
 
+    # Uniformly sample free cells.
     cells_selected = draw_uniform_sample(
         choices=cells_free,
         n=_num_particles,
@@ -87,24 +101,32 @@ def from_occupancy_grid(grid: OccupancyGrid, num_particles: int) -> List[Particl
     origin_yaw = yaw_from_quaternion(grid.info.origin.orientation)
 
     def from_cell(index: int) -> Particle:
+        # Compute cell column and row using cell index and grid dimensions.
         col = index % grid.info.width
         row = index // grid.info.width
 
+        # Scale cell dimensions by grid resolution to compute position in
+        # dimensions of the map.
         pos_relative = Vector2(
             x=col * grid.info.resolution,
             y=row * grid.info.resolution,
         )
 
+        # Uniformly pick a random yaw in range [0.0, 2.0 * pi].
         yaw_relative = rng.uniform(low=0.0, high=2.0 * math.pi)
 
+        # Offset relative position and yaw by origin to obtain absolute values
+        # in map space.
         pos_absolute = pos_relative + origin_pos
         yaw_absolute = yaw_relative + origin_yaw
 
+        # Create particle with absolute pose and uniform weights.
         return Particle(
             pose=TurtlePose(pos_absolute, yaw_absolute),
             weight=1.0 / _num_particles,
         )
 
+    # Create a particle for each free cell in those uniformly sampled.
     particles = [from_cell(c) for c in cells_selected]
 
     return particles

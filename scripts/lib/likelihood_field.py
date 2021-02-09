@@ -1,3 +1,7 @@
+"""
+Likelihood field for the measurement model.
+"""
+
 # pyright: reportMissingTypeStubs=false
 
 from dataclasses import dataclass
@@ -16,6 +20,20 @@ from lib.util import points_dist
 
 @dataclass
 class LikelihoodField:
+    """
+    A field of distances from the current cell to the nearest occupied cell.
+
+    @attribute `width`: The width of the field in cells.
+
+    @attribute `height`: The height of the field in cells.
+
+    @attribute `resolution`: The side length of each cell in meters.
+
+    @attribute `origin`: The position of the cell (0, 0) in meters.
+
+    @attribute `field`: The 2D field of distances.
+    """
+
     width: int
     height: int
     resolution: float
@@ -23,6 +41,10 @@ class LikelihoodField:
     field: ndarray
 
 
+"""
+Occupied cells are 0 cells away from themselves.
+Unknown cells are encoded using a negative distance.
+"""
 OCCUPIED: float = 0.0
 UNKNOWN: float = -1.0
 
@@ -57,6 +79,10 @@ def closest_to_index(field: LikelihoodField, ix: Tuple[int, int]) -> Optional[fl
 
 
 def from_occupancy_grid(grid: OccupancyGrid) -> LikelihoodField:
+    """
+    Create a likelihood field from the given occupancy grid. TODO comment more
+    """
+
     def to_pos(ix: int) -> Tuple[int, int]:
         return (ix % grid.info.width, ix // grid.info.width)
 

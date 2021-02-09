@@ -1,3 +1,5 @@
+# pyright: reportMissingTypeStubs=false
+
 from dataclasses import dataclass, replace
 from functools import partial, reduce
 import math
@@ -5,15 +7,13 @@ from typing import Callable, List, Optional, Tuple
 
 from nav_msgs.msg import OccupancyGrid
 import numpy as np
-from rospy_util.vector2 import Vector2  # pyright: reportMissingTypeStubs=false
+from rospy_util.vector2 import Vector2
 import rospy_util.vector2 as v2
 from sensor_msgs.msg import LaserScan
 
-from lib.likelihood_field import LikelihoodField
+from lib import LikelihoodField, Particle, TurtlePose
 import lib.likelihood_field as lf
-from lib.particle import Particle
 import lib.particle as particle
-from lib.turtle_pose import TurtlePose
 from lib.util import compose_many, draw_weighted_sample
 
 DIST_MAX: float = 3.5

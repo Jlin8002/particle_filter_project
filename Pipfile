@@ -9,15 +9,19 @@ verify_ssl = true
 name = "rospypi"
 
 [packages]
-rospy = "*"
 rospy-util = {editable = true, git = "https://github.com/AHW214/rospy-util.git"}
 kdtree = "*"
+geometry-msgs = {version = "*", index = "rospypi"}
+nav-msgs = {version = "*", index = "rospypi"}
+rospy = {version = "*", index = "rospypi"}
+sensor-msgs = {version = "*", index = "rospypi"}
+tf = {version = "*", index = "rospypi"}
 
 [dev-packages]
 black = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.8.5"
 
 [pipenv]
 allow_prereleases = true

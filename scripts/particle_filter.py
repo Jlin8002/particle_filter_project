@@ -13,13 +13,12 @@ from rospy_util.vector2 import Vector2
 import rospy_util.vector2 as v2
 from sensor_msgs.msg import LaserScan
 
+from lib import LikelihoodField, Particle, TurtlePose
 from lib.controller import Cmd, Controller, Sub, cmd, sub
-from lib.likelihood_field import LikelihoodField
 import lib.likelihood_field as lf
-from lib.particle import Particle
-from lib.turtle_pose import TurtlePose
 from lib.util import compose_many
 import particle_cloud as pc
+
 
 ### Model ###
 

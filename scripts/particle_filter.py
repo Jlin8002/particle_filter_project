@@ -252,10 +252,12 @@ def subscriptions(model: Model) -> List[Sub[Any, Msg]]:
 
     # While awaiting the map, subscribe to the map server.
     if isinstance(model, AwaitMap):
+        # While awaiting the map, subscribe to the map server.
         return [sub.occupancy_grid(LoadMap)]
 
     # While awaiting the first robot pose, subscribe to odometry messages.
     if isinstance(model, AwaitPose):
+        # While awaiting the first robot pose, subscribe to movement messages.
         return [sub.odometry(Move)]
 
     # Once initialized, subscribe to odometry and laser scan messages.

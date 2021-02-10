@@ -90,11 +90,11 @@ that are near the robot, but happen to be against the boundaries of the map.
 - When tuning our particle filter parameters, our initial changes rendered our
 localization ineffective. Our impression was thus that our filter was tuned, and
 that we should not adjust it further. We then considered that, although the changes
-seemed small, perhaps an even finer tuning was possible. After halving the
-adjustment (an addition of 0.05 meters to our obstacle distance SD, which seemed
+seemed small, perhaps an even finer tuning was possible. After halving the adjustment
+(producing an addition of 0.05 meters to our obstacle distance SD, which seemed
 inconsequential), the filter localized even more effectively than before making
-changes. The takeaway would be that, for making adjustments to the parameters of
-the system, have a sense of scale for each parameter. That way you do not tune
+changes. The takeaway would be that, for making adjustments to the parameters
+of the system, have a sense of scale for each parameter. That way you do not tune
 too heavily or lightly, and assume the system is already tuned (as we almost did).
 
 - We learned the importance of building preventative systems into our algorithms

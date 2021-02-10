@@ -9,7 +9,7 @@ Framework for running the particle filter.
 from dataclasses import dataclass, replace
 from functools import partial
 import math
-from typing import Any, List, Union, Tuple
+from typing import Any, List, Tuple, Union
 
 from nav_msgs.msg import OccupancyGrid
 import rospy
@@ -75,7 +75,7 @@ class LoadMap:
     Received the occupancy grid from the map server.
     """
 
-    map: OccupancyGrid
+    grid: OccupancyGrid
 
 
 @dataclass
@@ -90,7 +90,7 @@ class Move:
 @dataclass
 class Scan:
     """
-    Received a distance scan from the robot.
+    Received a laser scan from the robot.
     """
 
     scan: LaserScan
@@ -115,14 +115,13 @@ NOISE_ANG: float = 0.4
 # Standard deviation for computing simulated scan probabilities.
 OBSTACLE_DIST_SD: float = 0.15
 
-# Number of laser scan ranges to consider when updating particle weights.
+# Number of laser scan ranges to consider when simulating scans.
 NUM_RANGES: int = 6
 
 
 def pose_displacement(p1: TurtlePose, p2: TurtlePose) -> Tuple[Vector2, float]:
     """
-    Calculate the robot's linear and angular displacement relative to its pose during
-    the last particle cloud update.
+    Calculate the linear and angular displacements between two TurtleBot poses.
     """
     displacement_linear = v2.rotate(p1.position - p2.position, -1.0 * p1.yaw)
     displacement_angular = p1.yaw - p2.yaw
@@ -163,14 +162,15 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
     state.
     """
 
-    # Switch the state from AwaitMap to AwaitPose upon receiving the occupancy grid.
+    # The map is received while awaiting the map.
     if isinstance(model, AwaitMap) and isinstance(msg, LoadMap):
         cloud_init = pc.normalize(
-            pc.initialize(num_particles=NUM_PARTICLES, map=msg.map)
+            pc.initialize(num_particles=NUM_PARTICLES, grid=msg.grid)
         )
 
-        likelihood_field = lf.from_occupancy_grid(msg.map)
+        likelihood_field = lf.from_occupancy_grid(msg.grid)
 
+        # Begin awaiting the first robot pose.
         return (
             AwaitPose(
                 likelihood_field=likelihood_field,
@@ -179,8 +179,9 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             [cmd.init_particle_cloud(cloud_init, frame_id="map")],
         )
 
-    # Switch the state from AwaitPose to Initialized upon receiving the robot odometry.
+    # An odometry measurement is received while awaiting an initial robot pose.
     if isinstance(model, AwaitPose) and isinstance(msg, Move):
+        # Particle filter is initialized; begin updating the particle cloud.
         return (
             Initialized(
                 likelihood_field=model.likelihood_field,
@@ -191,7 +192,7 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
             cmd.none,
         )
 
-    # Update the robot's pose upon receiving a movement command.
+    # Update the most recent robot pose upon receiving an odometry measurement.
     if isinstance(model, Initialized) and isinstance(msg, Move):
         return (replace(model, pose_most_recent=msg.pose), cmd.none)
 
@@ -217,24 +218,26 @@ def update(msg: Msg, model: Model) -> Tuple[Model, List[Cmd[Any]]]:
 
         robot_estimate = pc.estimate_pose(particle_cloud)
 
+        # Create model for next iteration of the particle filter.
         new_model = replace(
             model,
             particle_cloud=particle_cloud,
             pose_last_update=model.pose_most_recent,
         )
 
-        return (
-            new_model,
-            [
-                cmd.update_particle_cloud(particle_cloud, frame_id="map"),
-                *(
-                    [cmd.update_estimated_robot_pose(robot_estimate, frame_id="map")]
-                    if robot_estimate is not None
-                    else cmd.none
-                ),
-            ],
+        # Command for publishing updated particle cloud.
+        update_cloud = cmd.update_particle_cloud(particle_cloud, frame_id="map")
+
+        # Command for publishing estimated robot pose, if one was computed.
+        try_update_pose = (
+            [cmd.update_estimated_robot_pose(robot_estimate, frame_id="map")]
+            if robot_estimate is not None
+            else cmd.none
         )
 
+        return (new_model, [update_cloud, *try_update_pose])
+
+    # If none of the above conditions held, then do nothing.
     return (model, cmd.none)
 
 
@@ -246,15 +249,16 @@ def subscriptions(model: Model) -> List[Sub[Any, Msg]]:
     Subscribe to ROS topics that are necessary for the current particle filter
     state.
     """
+
+    # While awaiting the map, subscribe to the map server.
     if isinstance(model, AwaitMap):
-        # While awaiting the map, subscribe to the map server.
         return [sub.occupancy_grid(LoadMap)]
 
+    # While awaiting the first robot pose, subscribe to odometry messages.
     if isinstance(model, AwaitPose):
-        # While awaiting the first robot pose, subscribe to movement messages.
         return [sub.odometry(Move)]
 
-    # Once initialized, subscribe to movement and scan messages.
+    # Once initialized, subscribe to odometry and laser scan messages.
     return [sub.odometry(Move), sub.laser_scan(Scan)]
 
 
@@ -263,8 +267,7 @@ def subscriptions(model: Model) -> List[Sub[Any, Msg]]:
 
 def run() -> None:
     """
-    Instantiate a ROS node, set up the callback function for relevant ROS topics,
-    and listen for messages.
+    Instantiate a ROS node and run the particle filter.
     """
     rospy.init_node("turtlebot3_particle_filter")
 

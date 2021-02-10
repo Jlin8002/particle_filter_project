@@ -26,7 +26,7 @@ def yaw_from_quaternion(q: Quaternion) -> float:
 
 def yaw_to_quaternion(yaw: float) -> Quaternion:
     """
-    Create a quaternion from the given yaw component, in Euler angles.
+    Create a quaternion from the given yaw component in Euler angles.
     """
     components = quaternion_from_euler(ai=0.0, aj=0.0, ak=yaw)
     return Quaternion(*components)
@@ -48,7 +48,6 @@ def draw_weighted_sample(
 
     @param `n`: The number of elements to draw in the sample.
     """
-
     return random.default_rng().choice(
         a=choices,
         size=n,

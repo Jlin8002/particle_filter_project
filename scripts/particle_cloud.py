@@ -30,13 +30,16 @@ from lib.util import (
     yaw_from_quaternion,
 )
 
+"""
+Maximum TurtleBot3 laser scan distance.
+"""
 DIST_MAX: float = 3.5
 
 
 @dataclass
 class Range:
     """
-    A class for representing an entry in LaserScan.ranges.
+    A single laser scan range with distance below the maximum.
     """
 
     angle: int
@@ -97,7 +100,7 @@ def initialize(num_particles: int, grid: OccupancyGrid) -> List[Particle]:
 
 def normalize(particles: List[Particle]) -> List[Particle]:
     """
-    Normalize the weights of particles in the cloud such that they sum to 1.0.
+    Normalize the weights of the particles in the cloud such that they sum to 1.0.
     If the total weight is 0.0, then return an empty cloud.
     """
     total_weight = sum([p.weight for p in particles])
@@ -186,7 +189,7 @@ def update_weight(
     particle: Particle,
 ) -> Particle:
     """
-    Recalculate the weight of a single particle based on how well its surroundings
+    Calculate the weight of a single particle based on how well its surroundings
     match the robot's scan values.
     """
     if particle.weight == 0.0:
@@ -198,7 +201,7 @@ def update_weight(
 
     def one_range(weight: float, range: Range) -> float:
         """
-        Update the particle's weight for a single LaserScan range measured by
+        Update the particle's weight for a single laser scan range measured by
         the robot.
         """
 
@@ -261,7 +264,7 @@ def update_poses_and_weights(
     """
 
     # Function to update the pose of a single particle:
-    # 1) Translate the particle by the given linear and angular displacement.
+    # 1) Translate the particle by the given linear and angular displacements.
     # 2) Apply noise to (wiggle) the new position and rotation of the particle.
     # 3) Zero the weight of (sanitize) the particle if it is not at a free position
     #    on the map.
@@ -271,12 +274,17 @@ def update_poses_and_weights(
         partial(particle.translate, disp_linear, disp_angular),
     )
 
-    # Calculate equally spaced angles from the valid ranges to use for
-    # probability computation when updating weights.
+    # Pick equally spaced ranges from the laser scan measurements under the maximum
+    # distance to use for probability computation when updating weights.
     ranges = valid_ranges(robot_scan)
     ranges_to_check = [
         ranges[round(i)]
-        for i in np.linspace(0, len(ranges) - 1, num_ranges, endpoint=False)
+        for i in np.linspace(
+            start=0,
+            stop=len(ranges) - 1,
+            num=num_ranges,
+            endpoint=False,
+        )
     ]
 
     # Function to update the weight of a single particle.

@@ -28,13 +28,20 @@ position.
 We implemented operations for updating the particle cloud in
 `scripts/particle_cloud.py`. The functions performing the main operations are:
 
-- `update_poses` for handling robot movement (motion model).
-- `update_weights` for handling robot laser scans (measurement model).
+- `initialize` for creating the initial particle cloud from the environment map.
+- `update_poses_and_weights` for handling robot movement (motion model) and laser
+scans (measurement model).
+  - We merged these operations into one to save a pass over the particle cloud.
 - `normalize` for normalizing particle weights after the measurement update.
 - `resample` for resampling the particles after weight normalization.
 
 We included docstrings and comments for documenting the above operations (and
 the rest of the codebase).
+
+Although not a requirement of the project, we wrote our own
+[small framework](https://github.com/Jlin8002/particle_filter_project/blob/main/scripts/particle_filter.py)
+for running the particle cloud, using ROS helper modules originally written for
+use during the warmup project ([repository here](https://github.com/AHW214/rospy-util)).
 
 ## Challenges
 
@@ -50,10 +57,10 @@ We also ran into an issue where particles would incorrectly converge to position
 in similar-looking rooms due to gaps in our scan angles. Depending on how many
 angles we chose to incorporate into our measurement model, the particles would
 always converge in some locations but not in others. We fixed this by making two
-changes: a correction to our measurement model so that it only samples scan
-measurements from ranges with finite distances, and tweaks to our noise/Gaussian
-width parameters to slow convergence (thus sustaining particles near the robot,
-but not yet exactly at the robot).
+changes: a correction to our measurement model so that it only sampled scan
+measurements from ranges under the maximum scan distance, and tweaks to our
+noise/Gaussian width parameters to slow convergence (thus sustaining particles
+near the robot, but not yet exactly at the robot).
 
 ## Future work
 
@@ -70,12 +77,10 @@ that are near the robot, but happen to be against the boundaries of the map.
 localization ineffective. Our impression was thus that our filter was tuned, and
 that we should not adjust it further. We then considered that, although the changes
 seemed small, perhaps an even finer tuning was possible. After halving the
-adjustment (iirc, an addition of 0.05 meters to our obstacle distance SD, which
-seemed inconsequential), the filter localized even more effectively than before
-making changes. The takeaway would be that, for making adjustments to the
-parameters of the system, have a sense of scale for each parameter. That way
-you do not tune too heavily or lightly, and assume the system is already tuned
-(as we almost did).
+adjustment (an addition of 0.05 meters to our obstacle distance SD, which seemed inconsequential), the filter localized even more effectively than before making
+changes. The takeaway would be that, for making adjustments to the parameters of
+the system, have a sense of scale for each parameter. That way you do not tune
+too heavily or lightly, and assume the system is already tuned (as we almost did).
 
 - We learned the importance of building preventative systems into our algorithms
 instead of turning to reactionary measures in the event that unexpected behavior
@@ -95,8 +100,8 @@ combining our logic to more quickly identify and address those problems. Finally
 working together helped us maintain presence and focus for the duration of the
 project.
 
-- The use of [Visual Studio Code Live Share](https://code.visualstudio.com/learn/collaboration/live-share)
-greatly increased the efficacy of pair programming remotely. Being able to edit
-the same code in real time meant that we could apply changes across our project
-a lot quicker and cut down on time spent fixing merge conflicts. Think Google Docs
-but for code.
+- Using the Visual Studio Code [Live Share](https://code.visualstudio.com/learn/collaboration/live-share)
+extension greatly increased the efficacy of pair programming remotely. Being able
+to edit the same code in real time meant that we could apply changes across our
+project a lot more quickly and cut down on time spent fixing merge conflicts. Think
+Google Docs but for code.

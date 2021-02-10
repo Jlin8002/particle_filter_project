@@ -22,8 +22,8 @@ to obtain the linear and angular displacement of the robot. Apply these displace
 to each of the particles. To check updated positions, perform a lookup in the
 `OccupancyGrid`: if the updated location corresponds to a black or gray value,
 then the particle has moved outside the navigable space. Possible responses
-include: 1) Lower (or zero) the weight of the particle; 2) Use the old position;
-3) Find and apply the maximum possible displacement to the particle.
+include: 1) Lower (or zero) the weight of the particle; 2) Use the old position; 3)
+Find and apply the maximum possible displacement to the particle.
 
 - Testing: Use RViz to visualize the particles before and after a motion update.
 
@@ -36,13 +36,18 @@ scanner (search radius of LiDAR divided by the cell resolution).
 (possibly convoluted to implement, we might be over thinking this). Convert LiDAR
 scan distances to cells, and use the same weighting procedure from the class example
 (sum of differences).~~
-Compute a likelihood field from the occupancy grid using nearest-neighbor matching.
-Take certain angles around each of the particles and look at the corresponding LiDAR scan distances, then perform lookups in the likelihood field at those locations to compare the robot scan distances to the surroundings of each of the particles. Scale the particle weights with how closely the scan distances match each of the particle's likelihood values.
+Create a likelihood field from the occupancy grid using nearest-neighbor search.
+Take certain angles around each of the particles and look at the corresponding
+LiDAR scan distances, then perform lookups in the likelihood field at those
+locations to compare the robot scan distances to the surroundings of each of the
+particles. Scale the particle weights with how closely the scan distances match
+each of the particle's likelihood values.
 
-- Testing: Test ~~raycast operation~~ likelihood weighting with a single particle in a simple environment
-(no obstacles, single obstacle, one obstacle occluding another, etc) and verify
-the simulated scans. Then, test with many particles, and ensure that the highest
-weighted particles have a similar view to that of the robot.
+- Testing: Test ~~raycast operation~~ likelihood weighting with a single particle
+in a simple environment (no obstacles, single obstacle, one obstacle occluding
+another, etc) and verify the simulated scans. Then, test with many particles,
+and ensure that the highest weighted particles have a similar view to that of the
+robot.
 
 ### Normalizing importance weights
 

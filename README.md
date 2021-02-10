@@ -2,18 +2,18 @@
 
 **Team: Jason Lin and Adam Weider**
 
-## Setup
-
-This project uses `pipenv` for local package management. [Read here](docs/SETUP.md)
-for instructions on how to perform setup.
-
 ### TurtleBot3 localizes itself with the help of the particle filter
 
 ![particle filter run](media/particle_filter.gif)
 
 The above run was performed with 5000 particles, rather than the normal
-10,000, in order to have the cloud following closer to TurtleBot during the
+10,000, in order to have the cloud follow TurtleBot more closely during the
 demonstration.
+
+## Setup
+
+This project uses `pipenv` for local package management. [Read here](docs/setup.md)
+for instructions on how to perform setup.
 
 ## Objectives
 
@@ -39,7 +39,8 @@ position.
 ## Main steps
 
 We implemented operations for updating the particle cloud in
-`scripts/particle_cloud.py`. The functions performing the main operations are:
+[`scripts/particle_cloud.py`](scripts/particle_cloud.py). The functions performing
+the main operations are:
 
 - `initialize` for creating the initial particle cloud from the environment map.
 - `update_poses_and_weights` for handling robot movement (motion model) and laser
@@ -53,7 +54,7 @@ the rest of the codebase).
 
 Although not a requirement of the project, we wrote our own
 [small framework](scripts/particle_filter.py) for running the particle cloud,
-using ROS helper modules originally written for use during the warmup project
+using ROS helper modules originally written during the warmup project
 ([repository here](https://github.com/AHW214/rospy-util)).
 
 ## Challenges

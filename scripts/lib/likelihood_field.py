@@ -21,7 +21,8 @@ from lib.util import points_dist
 @dataclass
 class LikelihoodField:
     """
-    A field of distances from the current cell to the nearest occupied cell.
+    A two-dimensional field of distances from the current cell to the nearest
+    occupied cell.
 
     @attribute `width`: The width of the field in cells.
 
@@ -105,8 +106,8 @@ def from_occupancy_grid(grid: OccupancyGrid) -> LikelihoodField:
 
     occupied_positions = [to_pos(ix) for (ix, c) in cells_indexed if c == cell.OCCUPIED]
 
-    # Use a two-dimensional k-d tree to quickly find the nearest occupied cell
-    # to a given free cell
+    # Use a two-dimensional k-d tree to quickly find the occupied cell closest
+    # to a given free cell.
     occupied_tree = kdtree.create(point_list=occupied_positions)
 
     def compute_distance(ix: int, c: int) -> float:
@@ -122,7 +123,7 @@ def from_occupancy_grid(grid: OccupancyGrid) -> LikelihoodField:
                 Tuple[kdtree.Node, float]
             ] = occupied_tree.search_nn(to_pos(ix), dist=points_dist)
 
-            # Contingency for a map with no occupied cells
+            # Contingency for a map with no occupied cells.
             if nearest_occupied is None:
                 return DIST_UNKNOWN
 
